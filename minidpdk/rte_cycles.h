@@ -3,9 +3,10 @@
 // MiniDPDK shim for DPDK's <rte_cycles.h>. Free functions at global scope,
 // mirroring DPDK. `cycles` are TSC ticks read via OSv's processor::ticks();
 // the frequency is derived once in internal/cycles.hh (OSv exposes no direct
-// TSC frequency). Delay/pause helpers are intentionally not provided here.
+// TSC frequency).
 
 #include <cstdint>
+#include <unistd.h>
 
 #include <processor.hh>
 
@@ -32,3 +33,24 @@ inline uint64_t rte_get_timer_hz() {
 inline uint64_t rte_rdtsc()          { return rte_get_timer_cycles(); }
 inline uint64_t rte_get_tsc_cycles() { return rte_get_timer_cycles(); }
 inline uint64_t rte_get_tsc_hz()     { return rte_get_timer_hz(); }
+
+// Busy-wait for at least `us` microseconds by spinning on the TSC. Needs
+// rte_cycles_init() to have run; otherwise the cycle count is zero and this
+// returns immediately.
+inline void rte_delay_us_block(unsigned int us) {
+    const uint64_t start = rte_get_timer_cycles();
+    const uint64_t cycles = static_cast<uint64_t>(us) * rte_get_timer_hz() / 1000000;
+    while (rte_get_timer_cycles() - start < cycles)
+        ;
+}
+
+// Sleeping delay: yields the CPU via OSv's usleep instead of busy-waiting.
+inline void rte_delay_us_sleep(unsigned int us) {
+    usleep(us);
+}
+
+// Generic microsecond delay. DPDK's default points this at the blocking
+// variant (callback registration is not modelled), so we do the same.
+inline void rte_delay_us(unsigned int us) {
+    rte_delay_us_block(us);
+}
