@@ -32,3 +32,7 @@ compile_commands.json
 downloaded_packages
 .firecracker
 external/llvm-project/
+minidpdk/driver/ena/
+minidpdk/internal ethdev.hh
+minidpdk/internal/timer_manager.hh
+minidpdk/rte_timer.h
