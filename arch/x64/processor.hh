@@ -399,6 +399,16 @@ inline void lfence()
     asm volatile("lfence");
 }
 
+inline void sfence()
+{
+    asm volatile("sfence");
+}
+
+inline void mfence()
+{
+    asm volatile("mfence");
+}
+
 inline bool rdrand(u64* dest)
 {
     unsigned char ok;

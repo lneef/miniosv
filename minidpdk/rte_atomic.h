@@ -9,6 +9,8 @@
 #include <atomic>
 #include <cstdint>
 
+#include <processor.hh>
+
 // DPDK keeps the counter in a struct member named `cnt`; we preserve that
 // layout but make it a std::atomic. Relaxed ordering matches DPDK's plain
 // `volatile cnt` accesses.
@@ -38,12 +40,10 @@ inline void rte_atomic64_inc(rte_atomic64_t *v) {
     v->cnt.fetch_add(1, std::memory_order_relaxed);
 }
 
-// Memory barriers: OSv provides no full memory barrier and no I/O barrier, only
-// a compiler barrier() and processor::lfence(). How to realise these on OSv is
-// still undecided, so they are stubbed as deleted functions: the header still
-// compiles, but any call site fails to compile until a real implementation is
-// chosen.
-// TODO: implement rte_mb / rte_wmb / rte_rmb.
-void rte_mb()  = delete;
-void rte_wmb() = delete;
-void rte_rmb() = delete;
+// Memory barriers: x86 hardware fences, mirroring DPDK's x86 mapping of
+// rte_mb/rte_wmb/rte_rmb onto mfence/sfence/lfence. The fence helpers live in
+// OSv's processor namespace (processor::lfence() was already there; sfence/mfence
+// follow the same idiom).
+inline void rte_mb()  { processor::mfence(); }
+inline void rte_wmb() { processor::sfence(); }
+inline void rte_rmb() { processor::lfence(); }
