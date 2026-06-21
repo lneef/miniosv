@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <new>
 struct stack {
   const size_t capacity;
   std::atomic<size_t> head{};
