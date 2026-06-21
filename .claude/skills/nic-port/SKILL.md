@@ -38,13 +38,9 @@ Port the application interface:
 - remove occurances of `rte_mempool_cache_flush`
 - replace `rte_strerror` with `std::sterror` and libc `errno`
 - remove any `RTE_MBUF_DYNFIELD` related code. (Fail these paths with an error and a log message)
-- replace `RTE_ASSERT` with simple c-style `assert`
-- Replace any driver specific logtypes(RX/TX, INIT, etc.) in logging macros/function with a logtype
-    DRIVER. e.g.:
-    ```
-     ENA_RX/ENA_TX/ENA_INIT/ENA_DRIVER -> DRIVER in macros and e.g. `RTE_LOGTYPE_ENA_RX` -> RTE_LOGTYPE_DRIVER
-    ```
-- Remove any leftover build files from DPDK(meson.build)
+- remove an configurability via cmdline args, keep the default values  
+- remove any `RTE_PMD_REGISTER_PCI_TABLE`, `RTE_PMD_REGISTER_KMOD_DEP`
+- remove any leftover build files from DPDK(meson.build)
 Goal: The driver compiles only with MiniDPDK includes, i.e. no DPDK includes are left
 Generate a short report listing changes in the application facing layer.
 - We do not support NIC-Flows remove these files. Make sure these offloads are not advertised
@@ -66,6 +62,7 @@ Generate a short report listing changes in the application facing layer.
     - ctrl and datapath vector are separated in MiniDPDK
     - Request Ctrl Path vectors for the ctrl path and Datapath vectors for the datapath
 - register the callback
+- set affinity(ctrl: mainlcore, datapath: Round Robin(pass Queue ID))
 - unmask the interrupts
 
 
