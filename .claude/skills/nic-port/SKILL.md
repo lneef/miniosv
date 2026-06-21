@@ -36,7 +36,8 @@ Port the application interface:
     - integrate them without a preceeding `struct`
 - `rte_pci_device` is replaced by `minidpdk::pci_device *pdev`
 - remove occurances of `rte_mempool_cache_flush`
-- replace `rte_strerror` with `std::sterror` and libc `errno`
+- replace `rte_strerror` with `std::sterror` and libc `errno` instead of `rte_errno`
+- do not set `tx_pkt_prepare` (should be `nullptr`), remove the corresponding unused prep_pkts-function
 - remove any `RTE_MBUF_DYNFIELD` related code. (Fail these paths with an error and a log message)
 - remove an configurability via cmdline args, keep the default values  
 - remove any `RTE_PMD_REGISTER_PCI_TABLE`, `RTE_PMD_REGISTER_KMOD_DEP`
