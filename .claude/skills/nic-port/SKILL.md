@@ -19,7 +19,7 @@ Goal: Hardware facing layer compiles without error. All remaining errors are out
     - byte order
     - barriers/fences (it should compile on x64 as well as aarch)
 - Ensure any includes are outside of `extern "C"` blocks
-- if there is a platform file (e.g. `x_plat.h`, `x_osdep.h`) acting as shim for the device facing layer, the layer h
+- if there is a platform file (e.g. `*_plat.h`, `*_osdep.h`) acting as shim for the device facing layer, the layer h
 as to compile solely with the functionality present in the shim
 
 # Step 2
