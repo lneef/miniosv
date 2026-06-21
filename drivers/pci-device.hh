@@ -15,6 +15,7 @@ namespace pci {
 
     class device: public function {
     public:
+        using iterator = std::map<int, bar *>::const_iterator;
         device(u8 bus, u8 device, u8 func);
         virtual ~device();
 
@@ -25,6 +26,9 @@ namespace pci {
         u16 get_subsystem_vid();
 
         virtual void dump_config();
+
+        iterator begin() const { return _bars.begin(); }
+        iterator end() const { return _bars.end(); }
 
     protected:
 

@@ -8,6 +8,10 @@
 #ifndef ALIGNED_NEW_HH
 #define ALIGNED_NEW_HH
 
+#include <cassert>
+#include <cstdlib>
+#include <utility>
+
 /**
  * In C++11, "new T()" is not guaranteed to fulfill unusual alignment
  * requirements that T might have. The problem is that there is no way to
