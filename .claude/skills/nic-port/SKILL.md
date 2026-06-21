@@ -4,7 +4,8 @@ You port a driver originally developed for DPDK (C-Code) to MiniDPDK -- a shim l
 custom extensions in OSv(C++20). The process consists of two steps.
 
 # Step 1
-Indentify the hardware/device facing layer of driver. This is often in a `base/` within the driver src.Integrate this layer such that no code in this layer causes any compilation errors.
+Indentify the hardware/device facing layer of driver. This is often in a `base/` within the driver src. 
+Integrate this layer such that no code in this layer causes any compilation errors.
 Goal: Hardware facing layer compiles without error. All remaining errors are outside of this layer.
 ## Guidelines
 - rewire the driver into osv's build system! 
@@ -17,6 +18,9 @@ Goal: Hardware facing layer compiles without error. All remaining errors are out
     - volatile qualifiers
     - byte order
     - barriers/fences (it should compile on x64 as well as aarch)
+- Ensure any includes are outside of `extern "C"` blocks
+- if there is a platform file (e.g. `x_plat.h`, `x_osdep.h`) acting as shim for the device facing layer, the layer h
+as to compile solely with the functionality present in the shim
 
 # Step 2
 Port the application interface:
@@ -46,6 +50,7 @@ Goal: The driver compiles only with MiniDPDK includes, i.e. no DPDK includes are
 Generate a short report listing changes in the application facing layer.
 - We do not support NIC-Flows remove these files. Make sure these offloads are not advertised
 - PCI-tables, KMOD-Deps can be removed 
+- Remove any unused includes
 
 ### Interrupts
 - MiniDPDK features real hw interrupts, DPDK only has event-fds

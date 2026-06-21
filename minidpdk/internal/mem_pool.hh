@@ -69,8 +69,8 @@ struct alignas(64) mbuf {
   // type of the packet
   uint32_t packet_type;
 
-  uint16_t tso_segz = 0;
-  uint16_t port_id = 0;
+  uint16_t tso_segez = 0;
+  uint16_t port = 0;
 
   mbuf() = default;
   mbuf(mbuf *next, mem_pool *sb, uintptr_t iova, uint32_t size,

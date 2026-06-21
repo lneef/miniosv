@@ -24,8 +24,6 @@
 // ---------------------------------------------------------------------------
 struct rte_eth_dev;
 struct rte_ether_addr;
-struct rte_mempool;
-struct rte_mbuf;
 
 // Maximum number of Rx/Tx queues tracked per port (mirrors DPDK's
 // RTE_MAX_QUEUES_PER_PORT; sized to comfortably cover the drivers' own limits).
