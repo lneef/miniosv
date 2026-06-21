@@ -503,6 +503,7 @@ drivers += minidpdk/driver/probe.o
 drivers += minidpdk/ethdev_driver.o
 drivers += minidpdk/rte_mbuf.o
 drivers += minidpdk/rte_mempool.o
+drivers += minidpdk/rte_lcore.o
 drivers += minidpdk/internal/stack.o
 endif
 
