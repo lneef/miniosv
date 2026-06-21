@@ -7,6 +7,7 @@
 // provided.
 
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
 #include <stdlib.h>
 
@@ -22,9 +23,8 @@ inline void *rte_zmalloc_socket(const char *type, size_t size, unsigned align,
     (void)socket;
     size_t a = align > sizeof(void *) ? align : sizeof(void *);
     void *p = nullptr;
-    if (posix_memalign(&p, a, size) != 0) {
+    if(!(p = aligned_alloc(a, size)))
         return nullptr;
-    }
     std::memset(p, 0, size);
     return p;
 }
