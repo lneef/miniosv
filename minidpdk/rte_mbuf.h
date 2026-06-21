@@ -5,12 +5,10 @@
 // RTE_MBUF_F_* offload flags and the rte_pktmbuf_* helpers the ENA driver uses.
 
 #include <cstdint>
-#include <type_traits>
 
 #include <minidpdk/internal/mem_pool.hh>
 
-// Bytes reserved before mbuf data; mirrors mem_pool::kDefaultHeadroom.
-#define RTE_PKTMBUF_HEADROOM mem_pool::kDefaultHeadroom; 
+#define RTE_PKTMBUF_HEADROOM (minidpdk::mem_pool::kDefaultHeadroom)
 
 #define RTE_MBUF_F_RX_VLAN (1ULL << 0)
 

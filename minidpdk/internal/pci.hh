@@ -1,5 +1,7 @@
 #pragma once
 
+#include "minidpdk/rte_lcore.h"
+#include "osv/sched.hh"
 #include <cassert>
 #include <cerrno>
 #include <cstddef>
@@ -63,6 +65,10 @@ struct intr_handle {
             for (auto *v : vectors)
                 delete v;
             vectors.clear();
+        }
+
+        void set_affinity(unsigned idx, uint16_t cpu){
+            get(idx)->set_affinity(sched::cpus[cpu % rte_lcore_count()]);
         }
     };
 

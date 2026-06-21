@@ -6,8 +6,11 @@
 // code is unchanged, while gaining type safety over the original macros.
 
 #include <concepts>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <type_traits>
 
@@ -15,32 +18,34 @@ inline void rte_memcpy(void *dst, const void *src, size_t n){
     std::memcpy(dst, src, n);
 }
 
-// Pack a struct to its natural (unpadded) layout.
+[[noreturn]] inline void rte_panic(const char *format, ...){
+    va_list ap;
+    va_start(ap, format);
+    std::vfprintf(stderr, format, ap);
+    va_end(ap);
+    std::abort();
+}
+
 #ifndef __rte_packed
 #define __rte_packed __attribute__((__packed__))
 #endif
 
-// Mark a function/parameter as possibly unused.
 #ifndef __rte_unused
 #define __rte_unused __attribute__((__unused__))
 #endif
 
-// DPDK's runtime assert maps onto the C-library assert (per the port spec).
 #ifndef RTE_ASSERT
 #define RTE_ASSERT(exp) assert(exp)
 #endif
 
-// Always inline a function, even at -O0.
 #ifndef __rte_always_inline
 #define __rte_always_inline inline __attribute__((always_inline))
 #endif
 
-// Align a type/variable to a cache line.
 #ifndef __rte_cache_aligned
 #define __rte_cache_aligned __attribute__((__aligned__(64)))
 #endif
 
-// Recover the enclosing struct from a pointer to one of its members.
 #ifndef container_of
 #define container_of(ptr, type, member)                                        \
   __extension__({                                                              \
