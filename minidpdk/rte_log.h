@@ -22,7 +22,7 @@
 #define RTE_LOG_DEBUG   8
 
 // Tag used for all DPDK shim logging; OSv filters severities per tag.
-#define RTE_LOG_OSV_TAG "dpdk"
+#define RTE_LOG_OSV_TAG "osv"
 
 // Map a DPDK log level onto OSv's logger_severity (osv/debug.h). DPDK has finer
 // levels than OSv, so several collapse: NOTICE/INFO -> info, and everything at
