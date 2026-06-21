@@ -495,6 +495,17 @@ drivers += drivers/msi.o
 endif
 drivers += drivers/driver.o
 
+# MiniDPDK shim layer and the NIC driver delegating to it. The concrete NIC
+# driver implementations under minidpdk/driver/ena are intentionally excluded.
+ifeq ($(conf_drivers_pci),1)
+drivers += drivers/nic.o
+drivers += minidpdk/driver/probe.o
+drivers += minidpdk/ethdev_driver.o
+drivers += minidpdk/rte_mbuf.o
+drivers += minidpdk/rte_mempool.o
+drivers += minidpdk/internal/stack.o
+endif
+
 ifeq ($(arch),x64)
 drivers += drivers/isa-serial.o
 drivers += arch/$(arch)/pvclock-abi.o
