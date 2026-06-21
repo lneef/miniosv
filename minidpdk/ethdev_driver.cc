@@ -73,3 +73,11 @@ int rte_eth_dev_pci_generic_remove(minidpdk::pci_device *pci_dev,
   std::free(eth_dev);
   return 0;
 }
+
+int rte_eth_dev_callback_process(struct rte_eth_dev *dev,
+		enum rte_eth_event_type event, void *ret_param){
+    (void)dev;
+    (void)event;
+    (void)ret_param;
+    return 0;
+}

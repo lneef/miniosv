@@ -184,6 +184,8 @@ int rte_eth_dev_pci_generic_probe(minidpdk::pci_device *pci_dev,
                                   eth_dev_pci_callback_t dev_init);
 int rte_eth_dev_pci_generic_remove(minidpdk::pci_device *pci_dev,
                                    eth_dev_pci_callback_t dev_uninit);
+int rte_eth_dev_callback_process(struct rte_eth_dev *dev,
+		enum rte_eth_event_type event, void *ret_param);
 
 // ---------------------------------------------------------------------------
 struct rte_pci_id {
@@ -225,3 +227,4 @@ struct rte_pci_driver {
   static void register_driver(rte_pci_driver *drv) { registry.push_back(*drv); }
   static void unregister_driver(rte_pci_driver *drv) { drv->hook.unlink(); }
 };
+

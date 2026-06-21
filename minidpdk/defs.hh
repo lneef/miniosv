@@ -162,3 +162,5 @@
 
 /* Device capability flags (rte_eth_dev_data.dev_flags) */
 #define RTE_ETH_DEV_AUTOFILL_QUEUE_XSTATS RTE_BIT32(5)
+#define RTE_ETH_DEV_INTR_LSC RTE_BIT32(1)
+

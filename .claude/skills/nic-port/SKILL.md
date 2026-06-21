@@ -31,8 +31,13 @@ Port the application interface:
     - inline each proxied op to its direct primary call
 - in case the driver uses interrupts (control/rx) proceed as state below
 - in `drv_flags` on `RTE_PCI_DRV_NEED_MAPPING` is relevant, you can drop the rest
-- Keep code changes to a minimum
-- you can remove any `RTE_MBUF_DYNFIELD` related code. (Fails these paths with an error and a log message)
+- some DPDK concepts are defined via using:
+    - `rte_mempool, rte_mbuf, rte_pktmbuf_pool`
+    - integrate them without a preceeding `struct`
+- `rte_pci_device` is replaced by `minidpdk::pci_device *pdev`
+- remove occurances of `rte_mempool_cache_flush`
+- replace `rte_strerror` with `std::sterror` and libc `errno`
+- remove any `RTE_MBUF_DYNFIELD` related code. (Fail these paths with an error and a log message)
 - replace `RTE_ASSERT` with simple c-style `assert`
 - Replace any driver specific logtypes(RX/TX, INIT, etc.) in logging macros/function with a logtype
     DRIVER. e.g.:
@@ -51,7 +56,12 @@ Generate a short report listing changes in the application facing layer.
 - You need to change rx-queue setup functions to accept `intr_config` structs
     - `intr_config` for each rx-queue holds the handler and context
 #### Workflow
-- msix interrupts need to be enable upfront for the device
+- use MiniDPDK interrupts directly
+    - rewrite the respective code sections
+    - replace the DPDK efd based interrupts propagation completely by using MiniDPDK's handler registration interface
+- msix interrupts need to be enabled upfront for the device (`dev->msix_enable`, `dev->msix_disable`)
+    - only enable them before setting up the control path
+    - second one is redundant
 - All msix-vectors needed to be request before they can be used
     - ctrl and datapath vector are separated in MiniDPDK
     - Request Ctrl Path vectors for the ctrl path and Datapath vectors for the datapath

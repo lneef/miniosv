@@ -8,4 +8,6 @@
 
 using rte_mempool = rte_pktmbuf_pool;
 
-void rte_mempool_free(rte_mempool *pool);
+void rte_mempool_free(rte_mempool *mp);
+
+uint16_t rte_pktmbuf_data_room_size(rte_mempool* mp);

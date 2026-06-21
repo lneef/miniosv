@@ -237,3 +237,8 @@ struct rte_eth_xstat {
 struct rte_eth_xstat_name {
   char name[RTE_ETH_XSTATS_NAME_SIZE];
 };
+
+enum rte_eth_event_type {
+  RTE_ETH_EVENT_INTR_LSC,
+  RTE_ETH_EVENT_INTR_RESET,
+};

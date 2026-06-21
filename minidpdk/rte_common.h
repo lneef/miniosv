@@ -8,7 +8,47 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
+
+inline void rte_memcpy(void *dst, const void *src, size_t n){
+    std::memcpy(dst, src, n);
+}
+
+// Pack a struct to its natural (unpadded) layout.
+#ifndef __rte_packed
+#define __rte_packed __attribute__((__packed__))
+#endif
+
+// Mark a function/parameter as possibly unused.
+#ifndef __rte_unused
+#define __rte_unused __attribute__((__unused__))
+#endif
+
+// DPDK's runtime assert maps onto the C-library assert (per the port spec).
+#ifndef RTE_ASSERT
+#define RTE_ASSERT(exp) assert(exp)
+#endif
+
+// Always inline a function, even at -O0.
+#ifndef __rte_always_inline
+#define __rte_always_inline inline __attribute__((always_inline))
+#endif
+
+// Align a type/variable to a cache line.
+#ifndef __rte_cache_aligned
+#define __rte_cache_aligned __attribute__((__aligned__(64)))
+#endif
+
+// Recover the enclosing struct from a pointer to one of its members.
+#ifndef container_of
+#define container_of(ptr, type, member)                                        \
+  __extension__({                                                              \
+    const __typeof__(((type *)0)->member) *_mptr = (ptr);                      \
+    (type *)((char *)_mptr - offsetof(type, member));                          \
+  })
+#endif
+
 
 // Pack a struct to its natural (unpadded) layout.
 #ifndef __rte_packed

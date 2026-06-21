@@ -10,7 +10,7 @@
 #include <minidpdk/internal/mem_pool.hh>
 
 // Bytes reserved before mbuf data; mirrors mem_pool::kDefaultHeadroom.
-#define RTE_PKTMBUF_HEADROOM 128
+#define RTE_PKTMBUF_HEADROOM mem_pool::kDefaultHeadroom; 
 
 #define RTE_MBUF_F_RX_VLAN (1ULL << 0)
 
@@ -152,9 +152,9 @@ template <typename T, T alignment> static constexpr T align(T val) {
   return (val + alignment - 1) & ~(alignment - 1);
 }
 
-#define rte_mbuf minidpdk::mbuf
-#define rte_pktmbuf_pool minidpdk::mem_pool
-#define rte_mbuf_ext_shared_info minidpdk::rte_mbuf_ext_shared_info
+using rte_mbuf = minidpdk::mbuf;
+using rte_pktmbuf_pool = minidpdk::mem_pool;
+using rte_mbuf_ext_shared_info = minidpdk::rte_mbuf_ext_shared_info;
 
 void rte_pktmbuf_free(rte_mbuf *mbuf);
 void rte_mbuf_raw_free(rte_mbuf *mbuf);
