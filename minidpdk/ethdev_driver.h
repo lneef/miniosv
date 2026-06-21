@@ -16,6 +16,7 @@
 #include <minidpdk/rte_ethdev.h>
 #include <minidpdk/internal/intrusive_list.hh>
 #include <minidpdk/internal/pci.hh>
+#include <minidpdk/defs.hh>
 
 // ---------------------------------------------------------------------------
 // Types referenced only through pointers below and defined elsewhere (other
@@ -192,6 +193,17 @@ struct rte_pci_id {
   uint16_t subsystem_vendor_id;
   uint16_t subsystem_device_id;
 };
+
+#define RTE_CLASS_ANY_ID 0xffffff
+#define RTE_PCI_ANY_ID   0xffff
+
+// Initializer for an rte_pci_id matching any subsystem/class of vend:dev.
+#define RTE_PCI_DEVICE(vend, dev)              \
+  .class_id = RTE_CLASS_ANY_ID,                \
+  .vendor_id = (vend),                         \
+  .device_id = (dev),                          \
+  .subsystem_vendor_id = RTE_PCI_ANY_ID,       \
+  .subsystem_device_id = RTE_PCI_ANY_ID
 
 struct rte_pci_driver;
 using pci_probe_t  = int (*)(rte_pci_driver *drv, minidpdk::pci_device *dev);

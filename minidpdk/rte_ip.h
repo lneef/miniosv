@@ -40,6 +40,8 @@ struct rte_ipv4_hdr {
     rte_be32_t dst_addr;        /**< destination address */
 } __rte_packed;
 
+#define RTE_IPV4_HDR_DF_FLAG 0x4000 /**< "Don't fragment" flag in fragment_offset */
+
 struct rte_ipv6_hdr {
     rte_be32_t vtc_flow;    /**< IP version, traffic class & flow label. */
     rte_be16_t payload_len; /**< IP payload size, including ext. headers */

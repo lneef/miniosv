@@ -9,6 +9,9 @@
 
 #include <minidpdk/internal/mem_pool.hh>
 
+// Bytes reserved before mbuf data; mirrors mem_pool::kDefaultHeadroom.
+#define RTE_PKTMBUF_HEADROOM 128
+
 #define RTE_MBUF_F_RX_VLAN (1ULL << 0)
 
 #define RTE_MBUF_F_RX_RSS_HASH (1ULL << 1)
