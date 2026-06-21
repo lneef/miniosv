@@ -13,3 +13,8 @@ solely on top of OSv features.
   forward to `internal/` for the real work.
 - Build on OSv whenever possible; do not reimplement features OSv already
   provides (see the repo-root `CLAUDE.md`).
+
+## Notes
+- ignore socket information/arguments for now
+    - add function arguments
+    - mark them as unused

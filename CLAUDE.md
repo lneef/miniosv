@@ -65,3 +65,7 @@ Build the larger test suite with `make app=tests`.
 
 ## Verification
 - Always verify compilation of osv. Do it always after finishing a task
+
+## Comment Style
+- Only commnet non obvious behavior
+- Keep comment concise and short
