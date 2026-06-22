@@ -34,10 +34,10 @@ struct alignas(64) mbuf {
   mem_pool *pool;
 
   // IO Virtual Address
-  uintptr_t iova;
+  uintptr_t buf_iova;
 
   // offset of the dataroom
-  uint16_t data_offset;
+  uint16_t data_off;
 
   // size of the packet(chained)
   // size of the used fraction of the dataroom
@@ -69,21 +69,21 @@ struct alignas(64) mbuf {
   // type of the packet
   uint32_t packet_type;
 
-  uint16_t tso_segez = 0;
+  uint16_t tso_segsz = 0;
   uint16_t port = 0;
 
   mbuf() = default;
   mbuf(mbuf *next, mem_pool *sb, uintptr_t iova, uint32_t size,
        uint16_t nb_segs, uint16_t data_len, uint16_t headroom)
       : next(next), buf_addr(reinterpret_cast<char *>(this) + sizeof(mbuf)),
-        pool(sb), iova(iova + sizeof(mbuf) + headroom), data_offset(headroom),
+        pool(sb), buf_iova(iova + sizeof(mbuf) + headroom), data_off(headroom),
         pkt_len(), data_len(data_len), buf_len(size), refcnt(1),
         nb_segs(nb_segs), ol_flags(), shinfo(nullptr) {}
 
   uint8_t *buf_start() { return reinterpret_cast<uint8_t *>(buf_addr); }
 
   template <typename T> T *data(size_t offset = 0) {
-    return reinterpret_cast<T *>(buf_start() + data_offset + offset);
+    return reinterpret_cast<T *>(buf_start() + data_off + offset);
   }
 
   const void *read(uint32_t off, uint32_t len, void *buf) {
@@ -117,16 +117,16 @@ struct alignas(64) mbuf {
   }
 
   template <typename T> T *prepend() {
-    data_offset -= sizeof(T);
+    data_off -= sizeof(T);
     data_len += sizeof(T);
-    iova -= sizeof(T);
+    buf_iova -= sizeof(T);
     return data<T>();
   }
 
   void adj(uint16_t len) {
-    data_offset += len;
+    data_off += len;
     data_len -= len;
-    iova += len;
+    buf_iova += len;
   }
 };
 
@@ -196,7 +196,7 @@ public:
       auto *m = new (obj + 1) mbuf(nullptr, this,
                          obj->iova + sizeof(obj_header), data_len, 1, 0,
                          kDefaultHeadroom);
-      assert(m->iova == get_iova(m) + sizeof(mbuf) + kDefaultHeadroom);
+      assert(m->buf_iova == get_iova(m) + sizeof(mbuf) + kDefaultHeadroom);
       objs->push(reinterpret_cast<void* const*>(&m), 1);
     }
   }
@@ -207,7 +207,7 @@ public:
     new (obj) mbuf(nullptr, this,
                    obj_hdr->iova + sizeof(obj_header), data_len, 1, 0,
                    kDefaultHeadroom);
-      assert(obj->iova == get_iova(obj) + sizeof(mbuf) + kDefaultHeadroom);
+      assert(obj->buf_iova == get_iova(obj) + sizeof(mbuf) + kDefaultHeadroom);
       objs->push(reinterpret_cast<void* const*>(&obj), 1);
   }
 

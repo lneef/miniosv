@@ -172,10 +172,10 @@ inline void rte_pktmbuf_attach_extbuf(rte_mbuf *m, void *buf_addr, uintptr_t iov
                                       uint16_t buf_len, rte_mbuf_ext_shared_info *shinfo) {
     m->shinfo = shinfo;
     m->buf_addr = static_cast<char *>(buf_addr);
-    m->iova = iova;
+    m->buf_iova = iova;
     m->buf_len = buf_len;
     m->data_len = 0;
-    m->data_offset = 0;
+    m->data_off = 0;
     m->ol_flags |= RTE_MBUF_F_EXTERNAL;
 }
 
