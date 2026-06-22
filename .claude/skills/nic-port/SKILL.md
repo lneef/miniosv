@@ -46,7 +46,7 @@ Port the application interface:
 - remove an configurability via cmdline args, keep the default values  
 - remove any `RTE_PMD_REGISTER_PCI_TABLE`, `RTE_PMD_REGISTER_KMOD_DEP`
 - remove any leftover build files from DPDK(meson.build)
-- `rte_alarm` is only a stub failing on every operation. Therefore keep the relevant code paths
+- `rte_alarm` is a stub in MiniDPDK. Keep relevant code in the PMD
 Goal: The driver compiles only with MiniDPDK includes, i.e. no DPDK includes are left
 Generate a short report listing changes in the application facing layer.
 - We do not support NIC-Flows remove these files. Make sure these offloads are not advertised
