@@ -4,5 +4,17 @@
   }, 
   "permissions": {
     "defaultMode": "acceptEdits"
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "autoAllowBashIfSandboxed": true,
+    "filesystem": {
+      "allowWrite": ["/tmp"],
+      "denyRead": ["~/.aws", "~/.ssh"]
+    },
+    "network": {
+      "allowedDomains": ["github.com", "https://doc.dpdk.org/guides/prog_guide/"]
+    }
   }
 }
