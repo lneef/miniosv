@@ -5,10 +5,10 @@
 #include <minidpdk/rte_malloc.h>
 
 // Definition of the global ethdev port table declared in <ethdev_driver.h>.
-rte_eth_dev::store_t rte_eth_dev::store{};
+constinit rte_eth_dev::store_t rte_eth_dev::store{};
 
 // Definition of the global PCI driver registry declared in <ethdev_driver.h>.
-rte_pci_driver::registry_t rte_pci_driver::registry{};
+constinit rte_pci_driver::registry_t rte_pci_driver::registry{};
 
 int rte_eth_dev_pci_generic_probe(minidpdk::pci_device *pci_dev,
                                   size_t private_data_size,
