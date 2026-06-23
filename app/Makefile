@@ -9,4 +9,4 @@
 # (See test/Makefile for the alternative test application, built with
 #  `make app=tests`.)
 
-app-objects = app/app.o
+app-objects = app/bench.o
