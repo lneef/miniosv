@@ -28,11 +28,23 @@ Port the application interface:
 - logging
 - RSS
 ## Guidelines
-- Do not change anything in device facing files. Only if there are compilation errors make it adhere to the cpp standard/extesions
+- Do NOT change anything in device facing files. Only if there are compilation errors make it adhere to the cpp standard/extesions
 - Remove Configurability via cmdline args (keep the default args)
 - OSv single process. Collpase DPDK Multiprocessing into the primary process's path 
-    - strip the rte_mp IPC and secondary-process branches 
-    - inline each proxied op to its direct primary call
+    1. inline each proxied op to its direct primary call
+    2. strip the `rte_mp` IPC and secondary-process branches 
+    3. Inline leftover delegating wrappers (macros AND functions). Replace each
+    call with the wrapper's body, substituting the actual arguments. Do NOT just
+    rename the symbol -- wrappers often add, drop, reorder, or fix arguments, so
+    inspect the body first:
+        - pure forward (rename works): `#define MY_FUNC(...) real_func(__VA_ARGS__)`
+        or `static inline int my_func(int a, int b) { return real_func(a, b); }`
+        -> `real_func`
+        - arg-adapting (must rewrite call sites): `static inline int my_func(int a)
+        { return real_func(a, DEFAULT_FLAG); }` -> rewrite each `my_func(x)` to
+        `real_func(x, DEFAULT_FLAG)`
+    4. remove any unused structs and orphaned comment section for mp
+
 - in case the driver uses interrupts (control/rx) proceed as state below
 - in `drv_flags` on `RTE_PCI_DRV_NEED_MAPPING` is relevant, you can drop the rest
 - some DPDK concepts are defined via using:
