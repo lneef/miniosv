@@ -6,6 +6,13 @@
 #include <cstdint>
 
 #include <minidpdk/rte_bitops.h>     // RTE_BIT64, RTE_BIT32
+// rte_mbuf / rte_mempool aliases used by the wrapper declarations below. Pulled
+// here so the names are available wherever this header is included (notably from
+// <ethdev_driver.h>, before it includes them itself).
+#include <minidpdk/rte_mbuf.h>
+#include <minidpdk/rte_mempool.h>
+
+struct rte_ether_addr;               // <rte_ether.h>
 
 /* packet fields */
 #define RTE_ETH_RSS_IPV4               RTE_BIT64(2)
@@ -100,6 +107,8 @@ inline constexpr unsigned RTE_ETH_XSTATS_NAME_SIZE = 64;
 
 // Rx multi-queue mode flag tested against dev_conf.rxmode.mq_mode.
 #define RTE_ETH_MQ_RX_RSS_FLAG 0x1
+// Rx multi-queue RSS mode (value apps assign to rxmode.mq_mode).
+#define RTE_ETH_MQ_RX_RSS RTE_ETH_MQ_RX_RSS_FLAG
 
 // ---------------------------------------------------------------------------
 // Enums.
@@ -242,3 +251,32 @@ enum rte_eth_event_type {
   RTE_ETH_EVENT_INTR_LSC,
   RTE_ETH_EVENT_INTR_RESET,
 };
+
+// ---------------------------------------------------------------------------
+// Public ethdev API. Each resolves a numeric port id to its device handle and
+// forwards to the driver's eth_dev_ops table or burst pointers. Definitions in
+// rte_ethdev.cc. Bad port ids return -ENODEV.
+// ---------------------------------------------------------------------------
+int rte_eth_dev_configure(uint16_t port_id, uint16_t nb_rx_q, uint16_t nb_tx_q,
+                          const struct rte_eth_conf *dev_conf);
+int rte_eth_dev_info_get(uint16_t port_id, struct rte_eth_dev_info *dev_info);
+int rte_eth_dev_adjust_nb_rx_tx_desc(uint16_t port_id, uint16_t *nb_rx_desc,
+                                     uint16_t *nb_tx_desc);
+int rte_eth_rx_queue_setup(uint16_t port_id, uint16_t rx_queue_id,
+                           uint16_t nb_rx_desc, unsigned int socket_id,
+                           const struct rte_eth_rxconf *rx_conf,
+                           rte_mempool *mb_pool);
+int rte_eth_tx_queue_setup(uint16_t port_id, uint16_t tx_queue_id,
+                           uint16_t nb_tx_desc, unsigned int socket_id,
+                           const struct rte_eth_txconf *tx_conf);
+int rte_eth_dev_start(uint16_t port_id);
+int rte_eth_dev_stop(uint16_t port_id);
+int rte_eth_macaddr_get(uint16_t port_id, struct rte_ether_addr *mac_addr);
+int rte_eth_stats_get(uint16_t port_id, struct rte_eth_stats *stats);
+int rte_eth_dev_rss_reta_update(uint16_t port_id,
+                                struct rte_eth_rss_reta_entry64 *reta_conf,
+                                uint16_t reta_size);
+uint16_t rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id,
+                          rte_mbuf **rx_pkts, uint16_t nb_pkts);
+uint16_t rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id,
+                          rte_mbuf **tx_pkts, uint16_t nb_pkts);

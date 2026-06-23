@@ -1,20 +1,23 @@
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 
 #include <minidpdk/ethdev_driver.h>
 #include <minidpdk/rte_malloc.h>
 
-// Definition of the global ethdev port table declared in <ethdev_driver.h>.
-constinit rte_eth_dev::store_t rte_eth_dev::store{};
-
-// Definition of the global PCI driver registry declared in <ethdev_driver.h>.
+constinit rte_eth_dev *rte_eth_dev::store[RTE_MAX_ETHPORTS]{};
 constinit rte_pci_driver::registry_t rte_pci_driver::registry{};
 
 int rte_eth_dev_pci_generic_probe(minidpdk::pci_device *pci_dev,
                                   size_t private_data_size,
                                   eth_dev_pci_callback_t dev_init) {
-  // rte_eth_dev carries a non-trivial intrusive hook, so construct it in place
-  // on cacheline-aligned storage; the two POD blocks come from zmalloc.
+  // Claim the first free slot in the global port table; its index is the port id.
+  auto slot = std::ranges::find(rte_eth_dev::store, nullptr);
+  if (slot == std::ranges::end(rte_eth_dev::store))
+    return -ENOSPC;
+  const auto port_id =
+      static_cast<uint16_t>(slot - std::ranges::begin(rte_eth_dev::store));
+
   void *mem = std::aligned_alloc(RTE_CACHE_LINE_SIZE, sizeof(rte_eth_dev));
   if (!mem)
     return -ENOMEM;
@@ -29,7 +32,6 @@ int rte_eth_dev_pci_generic_probe(minidpdk::pci_device *pci_dev,
     return -ENOMEM;
   }
 
-  // Private data must exist before dev_init, which dereferences it.
   eth_dev->data->dev_private = rte_zmalloc_socket(
       "ethdev private", private_data_size, RTE_CACHE_LINE_SIZE, SOCKET_ID_ANY);
   if (!eth_dev->data->dev_private) {
@@ -53,7 +55,9 @@ int rte_eth_dev_pci_generic_probe(minidpdk::pci_device *pci_dev,
     return ret;
   }
 
-  rte_eth_dev::store.push_back(*eth_dev);
+  // Publish in the port table so the port-id-indexed rte_eth_* wrappers resolve.
+  eth_dev->data->port_id = port_id;
+  *slot = eth_dev;
   pci_dev->eth_dev = eth_dev;
   return 0;
 }
@@ -67,9 +71,10 @@ int rte_eth_dev_pci_generic_remove(minidpdk::pci_device *pci_dev,
     return ret;
 
   pci_dev->unmap_resources();
+  rte_eth_dev::store[eth_dev->data->port_id] = nullptr;
   rte_free(eth_dev->data->dev_private);
   rte_free(eth_dev->data);
-  eth_dev->~rte_eth_dev(); 
+  eth_dev->~rte_eth_dev();
   std::free(eth_dev);
   return 0;
 }

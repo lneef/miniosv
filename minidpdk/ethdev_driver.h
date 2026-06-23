@@ -45,7 +45,7 @@ using eth_rx_queue_setup_t = int (*)(struct rte_eth_dev *dev,
                                      uint16_t rx_queue_id, uint16_t nb_rx_desc,
                                      unsigned int socket_id,
                                      const struct rte_eth_rxconf *rx_conf,
-                                     struct rte_mempool *mb_pool);
+                                     rte_mempool *mb_pool);
 using eth_tx_queue_setup_t = int (*)(struct rte_eth_dev *dev,
                                      uint16_t tx_queue_id, uint16_t nb_tx_desc,
                                      unsigned int socket_id,
@@ -92,11 +92,11 @@ using eth_tx_done_cleanup_t = int (*)(void *txq, uint32_t free_cnt);
 // ---------------------------------------------------------------------------
 // Fast-path burst typedefs.
 // ---------------------------------------------------------------------------
-using eth_rx_burst_t = uint16_t (*)(void *rxq, struct rte_mbuf **rx_pkts,
+using eth_rx_burst_t = uint16_t (*)(void *rxq, rte_mbuf **rx_pkts,
                                     uint16_t nb_pkts);
-using eth_tx_burst_t = uint16_t (*)(void *txq, struct rte_mbuf **tx_pkts,
+using eth_tx_burst_t = uint16_t (*)(void *txq, rte_mbuf **tx_pkts,
                                     uint16_t nb_pkts);
-using eth_tx_prep_t = uint16_t (*)(void *txq, struct rte_mbuf **tx_pkts,
+using eth_tx_prep_t = uint16_t (*)(void *txq, rte_mbuf **tx_pkts,
                                    uint16_t nb_pkts);
 
 // ---------------------------------------------------------------------------
@@ -163,7 +163,6 @@ struct rte_eth_dev_data {
 // ---------------------------------------------------------------------------
 
 struct rte_eth_dev {
-  minidpdk::intrusive_hook hook;
   struct rte_eth_dev_data *data;
   const struct eth_dev_ops *dev_ops;
   eth_rx_burst_t rx_pkt_burst;
@@ -171,8 +170,8 @@ struct rte_eth_dev {
   eth_tx_prep_t tx_pkt_prepare;
   minidpdk::pci_device *pci_dev; // OSv-backed PCI device handle
 
-  using store_t = minidpdk::intrusive_list<rte_eth_dev, &rte_eth_dev::hook>;
-  static constinit store_t store;
+  // Global port table: slot i holds the device with port_id i, nullptr if free.
+  static rte_eth_dev *store[RTE_MAX_ETHPORTS];
 };
 
 #define RTE_CLASS_TO_BUS_DEVICE(eth_dev, type) (eth_dev->pci_dev)
@@ -180,7 +179,8 @@ struct rte_eth_dev {
 // ---------------------------------------------------------------------------
 // PCI probe/remove helpers (DPDK <ethdev_pci.h> equivalents). probe allocates
 // an rte_eth_dev (plus its data and driver-private block), runs dev_init, and
-// on success enqueues it on rte_eth_dev::store; remove reverses this.
+// on success stores it in rte_eth_dev::store at its port_id slot; remove reverses
+// this.
 // ---------------------------------------------------------------------------
 using eth_dev_pci_callback_t = int (*)(struct rte_eth_dev *eth_dev);
 

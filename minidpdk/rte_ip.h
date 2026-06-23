@@ -9,11 +9,13 @@
 
 #include <minidpdk/rte_byteorder.h>
 #include <minidpdk/rte_common.h>     // RTE_PTR_ADD, RTE_ALIGN_FLOOR
-#include <rte_branch_prediction.h>   // unlikely
-#include <rte_mbuf.h>                // RTE_MBUF_F_TX_* used by the phdr helpers
+#include <minidpdk/rte_branch_prediction.h>   // unlikely
+#include <minidpdk/rte_mbuf.h>                // RTE_MBUF_F_TX_* used by the phdr helpers
 
 #define RTE_IPV4_HDR_IHL_MASK   (0x0f)
 #define RTE_IPV4_IHL_MULTIPLIER (4)
+
+#define RTE_IPPROTO_UDP 17   // UDP protocol number (next_proto_id)
 
 struct rte_ipv4_hdr {
     __extension__
@@ -39,6 +41,10 @@ struct rte_ipv4_hdr {
     rte_be32_t src_addr;        /**< source address */
     rte_be32_t dst_addr;        /**< destination address */
 } __rte_packed;
+
+#define IPVERSION (4)
+#define RTE_IPV4_MIN_IHL    (0x5)
+#define RTE_IPV4_VHL_DEF    ((IPVERSION << 4) | RTE_IPV4_MIN_IHL)
 
 #define RTE_IPV4_HDR_DF_FLAG 0x4000 /**< "Don't fragment" flag in fragment_offset */
 

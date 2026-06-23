@@ -501,6 +501,7 @@ ifeq ($(conf_drivers_pci),1)
 drivers += drivers/nic.o
 drivers += minidpdk/driver/probe.o
 drivers += minidpdk/ethdev_driver.o
+drivers += minidpdk/rte_ethdev.o
 drivers += minidpdk/rte_mbuf.o
 drivers += minidpdk/rte_mempool.o
 drivers += minidpdk/rte_lcore.o
