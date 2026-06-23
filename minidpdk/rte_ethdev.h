@@ -3,6 +3,7 @@
 // MiniDPDK shim for DPDK's <rte_ethdev.h>. Provides the RSS flag, hash-function
 // and RETA definitions the ENA driver references.
 
+#include "minidpdk/internal/pci.hh"
 #include <cstdint>
 
 #include <minidpdk/rte_bitops.h>     // RTE_BIT64, RTE_BIT32
@@ -168,6 +169,7 @@ struct rte_eth_link {
 struct rte_eth_rxconf {
   uint64_t offloads;        // per-queue Rx offloads (RTE_ETH_RX_OFFLOAD_*)
   uint16_t rx_free_thresh;  // Rx descriptor free threshold
+  minidpdk::intr_config irq_conf;  
 };
 
 struct rte_eth_txconf {
