@@ -11,7 +11,6 @@
 #include <ethdev_driver.h>
 #include <rte_cycles.h>
 #include <rte_timer.h>
-#include <rte_net.h>
 
 #include <cstdint>
 #include "ena_com.h"
@@ -89,7 +88,7 @@ typedef enum ena_llq_policy_t {
 } ena_llq_policy;
 
 struct ena_tx_buffer {
-	struct rte_mbuf *mbuf;
+	rte_mbuf *mbuf;
 	unsigned int tx_descs;
 	unsigned int num_of_bufs;
 	uint64_t timestamp;
@@ -99,7 +98,7 @@ struct ena_tx_buffer {
 
 /* Rx buffer holds only pointer to the mbuf - may be expanded in the future */
 struct ena_rx_buffer {
-	struct rte_mbuf *mbuf;
+	rte_mbuf *mbuf;
 	struct ena_com_buf ena_buf;
 };
 
@@ -170,7 +169,7 @@ struct __rte_cache_aligned ena_ring {
 		struct ena_tx_buffer *tx_buffer_info; /* contex of tx packet */
 		struct ena_rx_buffer *rx_buffer_info; /* contex of rx packet */
 	};
-	struct rte_mbuf **rx_refill_buffer;
+	rte_mbuf **rx_refill_buffer;
 	unsigned int ring_size; /* number of tx/rx_buffer_info's entries */
 	unsigned int size_mask;
 
@@ -184,9 +183,11 @@ struct __rte_cache_aligned ena_ring {
 
 	alignas(RTE_CACHE_LINE_SIZE) struct ena_com_rx_buf_info ena_bufs[ENA_PKT_MAX_BUFS];
 
-	struct rte_mempool *mb_pool;
+	rte_mempool *mb_pool;
 	unsigned int port_id;
 	unsigned int id;
+	/* Rx-queue interrupt handler/context supplied by the app at setup. */
+	minidpdk::intr_config irq_conf;
 	/* Max length PMD can push to device for LLQ */
 	uint8_t tx_max_header_size;
 	int configured;

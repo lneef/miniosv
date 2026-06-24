@@ -6,10 +6,11 @@
 #ifndef ENA_ETH_COM_H_
 #define ENA_ETH_COM_H_
 
+#include "ena_com.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
-#include "ena_com.h"
 
 /* we allow 2 DMA descriptors per LLQ entry */
 #define ENA_LLQ_ENTRY_DESC_CHUNK_SIZE	(2 * sizeof(struct ena_eth_io_tx_desc))

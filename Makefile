@@ -404,6 +404,14 @@ $(out)/%.o: %.c | generated-headers
 	$(makedir)
 	$(call quiet, $(CC) $(CFLAGS) -c -o $@ $<, CC $*.c)
 
+# ENA NIC driver: DPDK vendor C sources are compiled as C++ because the
+# MiniDPDK shim headers they pull in are C++. Bare <rte_*.h> includes resolve
+# against minidpdk/; the base/ and ena_defs/ dirs supply the device headers.
+ena-includes = -Iminidpdk -Iminidpdk/driver/ena -Iminidpdk/driver/ena/base -Iminidpdk/driver/ena/base/ena_defs
+$(out)/minidpdk/driver/ena/%.o: minidpdk/driver/ena/%.c | generated-headers $(out)/.libcxx-built
+	$(makedir)
+	$(call quiet, $(CXX) $(CXXFLAGS) $(ena-includes) -x c++ -c -o $@ $<, CXX $*.c)
+
 $(out)/%.o: %.S
 	$(makedir)
 	$(call quiet, $(ASCOMPILE) $(ASFLAGS) -c -o $@ $<, AS $*.S)
@@ -495,8 +503,7 @@ drivers += drivers/msi.o
 endif
 drivers += drivers/driver.o
 
-# MiniDPDK shim layer and the NIC driver delegating to it. The concrete NIC
-# driver implementations under minidpdk/driver/ena are intentionally excluded.
+# MiniDPDK shim layer and the NIC drivers delegating to it.
 ifeq ($(conf_drivers_pci),1)
 drivers += drivers/nic.o
 drivers += minidpdk/driver/probe.o
@@ -506,6 +513,11 @@ drivers += minidpdk/rte_mbuf.o
 drivers += minidpdk/rte_mempool.o
 drivers += minidpdk/rte_lcore.o
 drivers += minidpdk/internal/stack.o
+# ENA NIC driver
+drivers += minidpdk/driver/ena/base/ena_com.o
+drivers += minidpdk/driver/ena/base/ena_eth_com.o
+drivers += minidpdk/driver/ena/ena_ethdev.o
+drivers += minidpdk/driver/ena/ena_rss.o
 endif
 
 ifeq ($(arch),x64)

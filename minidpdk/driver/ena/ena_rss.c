@@ -6,6 +6,8 @@
 #include "ena_ethdev.h"
 #include "ena_logs.h"
 
+#include <rte_random.h>
+
 #include <ena_admin_defs.h>
 
 #define TEST_BIT(val, bit_shift) ((val) & (1UL << (bit_shift)))
@@ -77,7 +79,7 @@ int ena_rss_reta_update(struct rte_eth_dev *dev,
 			struct rte_eth_rss_reta_entry64 *reta_conf,
 			uint16_t reta_size)
 {
-	struct ena_adapter *adapter = dev->data->dev_private;
+	struct ena_adapter *adapter = (struct ena_adapter *)dev->data->dev_private;
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
 	int rc, i;
 	u16 entry_value;
@@ -143,7 +145,7 @@ int ena_rss_reta_query(struct rte_eth_dev *dev,
 		       struct rte_eth_rss_reta_entry64 *reta_conf,
 		       uint16_t reta_size)
 {
-	struct ena_adapter *adapter = dev->data->dev_private;
+	struct ena_adapter *adapter = (struct ena_adapter *)dev->data->dev_private;
 	int rc;
 	int i;
 	int reta_conf_idx;
@@ -451,7 +453,7 @@ static int ena_rss_hash_set(struct ena_com_dev *ena_dev,
 			return -ENOTSUP;
 		}
 		PMD_DRV_LOG_LINE(WARNING,
-			"Setting RSS hash fields is not supported. Using default values: 0x%"PRIx64,
+			"Setting RSS hash fields is not supported. Using default values: 0x%" PRIx64,
 			(uint64_t)(ENA_ALL_RSS_HF));
 	} else if (rc != 0)  {
 		PMD_DRV_LOG_LINE(ERR, "Failed to set RSS hash fields");
@@ -548,7 +550,7 @@ int ena_rss_configure(struct ena_adapter *adapter)
 int ena_rss_hash_update(struct rte_eth_dev *dev,
 			struct rte_eth_rss_conf *rss_conf)
 {
-	struct ena_adapter *adapter = dev->data->dev_private;
+	struct ena_adapter *adapter = (struct ena_adapter *)dev->data->dev_private;
 	int rc;
 
 	rte_spinlock_lock(&adapter->admin_lock);
@@ -565,7 +567,7 @@ int ena_rss_hash_update(struct rte_eth_dev *dev,
 int ena_rss_hash_conf_get(struct rte_eth_dev *dev,
 			  struct rte_eth_rss_conf *rss_conf)
 {
-	struct ena_adapter *adapter = dev->data->dev_private;
+	struct ena_adapter *adapter = (struct ena_adapter *)dev->data->dev_private;
 	struct ena_com_dev *ena_dev = &adapter->ena_dev;
 	enum ena_admin_flow_hash_proto proto;
 	uint64_t rss_hf = 0;

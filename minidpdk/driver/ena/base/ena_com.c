@@ -241,7 +241,7 @@ static struct ena_comp_ctx *__ena_com_submit_admin_cmd(struct ena_com_admin_queu
 	if (unlikely(cnt >= admin_queue->q_depth)) {
 		ena_trc_dbg(admin_queue->ena_dev, "Admin queue is full.\n");
 		admin_queue->stats.out_of_space++;
-		return ERR_PTR(ENA_COM_NO_SPACE);
+		return (struct ena_comp_ctx *)ERR_PTR(ENA_COM_NO_SPACE);
 	}
 
 	cmd_id = admin_queue->curr_cmd_id;
@@ -254,7 +254,7 @@ static struct ena_comp_ctx *__ena_com_submit_admin_cmd(struct ena_com_admin_queu
 
 	comp_ctx = get_comp_ctxt(admin_queue, cmd_id, true);
 	if (unlikely(!comp_ctx))
-		return ERR_PTR(ENA_COM_INVAL);
+		return (struct ena_comp_ctx *)ERR_PTR(ENA_COM_INVAL);
 
 	comp_ctx->status = ENA_CMD_SUBMITTED;
 	comp_ctx->comp_size = (u32)comp_size_in_bytes;
@@ -288,7 +288,7 @@ static int ena_com_init_comp_ctxt(struct ena_com_admin_queue *admin_queue)
 	struct ena_comp_ctx *comp_ctx;
 	u16 i;
 
-	admin_queue->comp_ctx = ENA_MEM_ALLOC(admin_queue->q_dmadev, size);
+	admin_queue->comp_ctx = (struct ena_comp_ctx *)ENA_MEM_ALLOC(admin_queue->q_dmadev, size);
 	if (unlikely(!admin_queue->comp_ctx)) {
 		ena_trc_err(ena_dev, "Memory allocation failed\n");
 		return ENA_COM_NO_MEM;
@@ -315,7 +315,7 @@ static struct ena_comp_ctx *ena_com_submit_admin_cmd(struct ena_com_admin_queue 
 	ENA_SPINLOCK_LOCK(admin_queue->q_lock, flags);
 	if (unlikely(!admin_queue->running_state)) {
 		ENA_SPINLOCK_UNLOCK(admin_queue->q_lock, flags);
-		return ERR_PTR(ENA_COM_NO_DEVICE);
+		return (struct ena_comp_ctx *)ERR_PTR(ENA_COM_NO_DEVICE);
 	}
 	comp_ctx = __ena_com_submit_admin_cmd(admin_queue, cmd,
 					      cmd_size_in_bytes,
@@ -380,7 +380,7 @@ static int ena_com_init_io_sq(struct ena_com_dev *ena_dev,
 				   io_sq->bounce_buf_ctrl.base_buffer,
 				   ctx->numa_node);
 		if (!io_sq->bounce_buf_ctrl.base_buffer)
-			io_sq->bounce_buf_ctrl.base_buffer = ENA_MEM_ALLOC(ena_dev->dmadev, size);
+			io_sq->bounce_buf_ctrl.base_buffer = (u8 *)ENA_MEM_ALLOC(ena_dev->dmadev, size);
 
 		if (unlikely(!io_sq->bounce_buf_ctrl.base_buffer)) {
 			ena_trc_err(ena_dev, "Bounce buffer memory allocation failed\n");
@@ -1299,7 +1299,7 @@ static int ena_com_indirect_table_allocate(struct ena_com_dev *ena_dev)
 	requested_tbl_size = (1ULL << requested_log_tbl_size) *
 			     sizeof(u16);
 	rss->host_rss_ind_tbl =
-		ENA_MEM_ALLOC(ena_dev->dmadev,
+		(u16 *)ENA_MEM_ALLOC(ena_dev->dmadev,
 			      requested_tbl_size);
 	if (unlikely(!rss->host_rss_ind_tbl))
 		goto mem_err2;
@@ -2984,9 +2984,9 @@ int ena_com_get_hash_function(struct ena_com_dev *ena_dev,
 		return rc;
 
 	/* ENA_FFS() returns 1 in case the lsb is set */
-	rss->hash_func = ENA_FFS(get_resp.u.flow_hash_func.selected_func);
+	rss->hash_func = (enum ena_admin_hash_functions)ENA_FFS(get_resp.u.flow_hash_func.selected_func);
 	if (rss->hash_func)
-		rss->hash_func--;
+		rss->hash_func = (enum ena_admin_hash_functions)(rss->hash_func - 1);
 
 	*func = rss->hash_func;
 
@@ -3082,7 +3082,7 @@ int ena_com_set_default_hash_ctrl(struct ena_com_dev *ena_dev)
 	int rc, i;
 
 	/* Get the supported hash input */
-	rc = ena_com_get_hash_ctrl(ena_dev, 0, NULL);
+	rc = ena_com_get_hash_ctrl(ena_dev, (enum ena_admin_flow_hash_proto)0, NULL);
 	if (unlikely(rc))
 		return rc;
 
@@ -3131,7 +3131,7 @@ int ena_com_set_default_hash_ctrl(struct ena_com_dev *ena_dev)
 
 	/* In case of failure, restore the old hash ctrl */
 	if (unlikely(rc))
-		ena_com_get_hash_ctrl(ena_dev, 0, NULL);
+		ena_com_get_hash_ctrl(ena_dev, (enum ena_admin_flow_hash_proto)0, NULL);
 
 	return rc;
 }
@@ -3170,7 +3170,7 @@ int ena_com_fill_hash_ctrl(struct ena_com_dev *ena_dev,
 
 	/* In case of failure, restore the old hash ctrl */
 	if (unlikely(rc))
-		ena_com_get_hash_ctrl(ena_dev, 0, NULL);
+		ena_com_get_hash_ctrl(ena_dev, (enum ena_admin_flow_hash_proto)0, NULL);
 
 	return 0;
 }

@@ -381,7 +381,7 @@ static int ena_com_create_meta(struct ena_com_io_sq *io_sq,
 {
 	struct ena_eth_io_tx_meta_desc *meta_desc = NULL;
 
-	meta_desc = get_tx_sq_desc(io_sq);
+	meta_desc = (decltype(meta_desc))get_tx_sq_desc(io_sq);
 	if (unlikely(!meta_desc))
 		return ENA_COM_FAULT;
 
@@ -454,9 +454,9 @@ static int ena_com_create_and_store_tx_meta_desc(struct ena_com_io_sq *io_sq,
 static void ena_com_rx_set_flags(struct ena_com_rx_ctx *ena_rx_ctx,
 				 struct ena_eth_io_rx_cdesc_ext *cdesc)
 {
-	ena_rx_ctx->l3_proto = cdesc->base.status &
-		ENA_ETH_IO_RX_CDESC_BASE_L3_PROTO_IDX_MASK;
-	ena_rx_ctx->l4_proto =
+	ena_rx_ctx->l3_proto = (enum ena_eth_io_l3_proto_index)(cdesc->base.status &
+		ENA_ETH_IO_RX_CDESC_BASE_L3_PROTO_IDX_MASK);
+	ena_rx_ctx->l4_proto = (enum ena_eth_io_l4_proto_index)
 		ENA_FIELD_GET(cdesc->base.status,
 			      ENA_ETH_IO_RX_CDESC_BASE_L4_PROTO_IDX_MASK,
 			      ENA_ETH_IO_RX_CDESC_BASE_L4_PROTO_IDX_SHIFT);
@@ -521,7 +521,7 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 		return ENA_COM_INVAL;
 	}
 
-	rc = ena_com_write_header_to_bounce(io_sq, buffer_to_push, header_len);
+	rc = ena_com_write_header_to_bounce(io_sq, (u8 *)buffer_to_push, header_len);
 	if (unlikely(rc))
 		return rc;
 
@@ -542,7 +542,7 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 		return rc;
 	}
 
-	desc = get_tx_sq_desc(io_sq);
+	desc = (decltype(desc))get_tx_sq_desc(io_sq);
 	if (unlikely(!desc))
 		return ENA_COM_FAULT;
 
@@ -604,7 +604,7 @@ int ena_com_prepare_tx(struct ena_com_io_sq *io_sq,
 				return rc;
 			}
 
-			desc = get_tx_sq_desc(io_sq);
+			desc = (decltype(desc))get_tx_sq_desc(io_sq);
 			if (unlikely(!desc))
 				return ENA_COM_FAULT;
 
@@ -731,7 +731,7 @@ int ena_com_add_single_rx_desc(struct ena_com_io_sq *io_sq,
 		return ENA_COM_NO_SPACE;
 
 	/* virt_addr allocation success is checked before calling this function */
-	desc = get_sq_desc_regular_queue(io_sq);
+	desc = (decltype(desc))get_sq_desc_regular_queue(io_sq);
 
 	memset(desc, 0x0, sizeof(struct ena_eth_io_rx_desc));
 
