@@ -430,6 +430,7 @@ extern "C" void osv_app_main() {
   conf.l4port = 1234;
   conf.mtu = 128;
 
+  rte_cycles_init();
   lcore_container::init(config.nb_cores);
   if (configure_port(info, config)) {
     osv::poweroff();

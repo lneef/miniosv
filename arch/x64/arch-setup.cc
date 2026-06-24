@@ -11,6 +11,7 @@
 #include "arch-setup.hh"
 #include <osv/mempool.hh>
 #include <osv/mmu.hh>
+#include "drivers/nic.hh"
 #include "processor.hh"
 #include "processor-flags.h"
 #include "msr.hh"
@@ -241,9 +242,9 @@ void arch_init_drivers()
         boot_time.event("pci enumerated");
     }
 #endif
-
     // Initialize all drivers
     hw::driver_manager* drvman = hw::driver_manager::instance();
+    drvman->register_driver(nic::nic::probe);
     boot_time.event("drivers probe");
     drvman->load_all();
     drvman->list_drivers();
