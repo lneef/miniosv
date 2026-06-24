@@ -19,26 +19,25 @@
 #include <rte_mbuf.h>
 #include <rte_tcp.h>
 #include <rte_udp.h>
-
-// Prepare the pseudo-header checksum for TSO and non-TSO tcp/udp, based on the
-// requested TX offload flags. Returns 0 on success, -ENOTSUP if the needed
-// headers are not contained in the first data segment.
-static inline int rte_net_intel_cksum_flags_prepare(struct rte_mbuf *m, uint64_t ol_flags)
+ 
+static inline int
+rte_net_intel_cksum_flags_prepare(rte_mbuf *m, uint64_t ol_flags)
 {
+    const uint64_t inner_requests = RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_L4_MASK |
+        RTE_MBUF_F_TX_TCP_SEG | RTE_MBUF_F_TX_UDP_SEG;
     /* Initialise ipv4_hdr to avoid false positive compiler warnings. */
     struct rte_ipv4_hdr *ipv4_hdr = NULL;
     struct rte_ipv6_hdr *ipv6_hdr;
     struct rte_tcp_hdr *tcp_hdr;
     struct rte_udp_hdr *udp_hdr;
     uint64_t inner_l3_offset = m->l2_len;
-
+ 
     /*
      * Does packet set any of available offloads?
      * Mainly it is required to avoid fragmented headers check if
      * no offloads are requested.
      */
-    if (!(ol_flags & (RTE_MBUF_F_TX_IP_CKSUM | RTE_MBUF_F_TX_L4_MASK | RTE_MBUF_F_TX_TCP_SEG |
-                      RTE_MBUF_F_TX_UDP_SEG)))
+    if (!(ol_flags & inner_requests))
         return 0;
 
     /*
@@ -47,59 +46,59 @@ static inline int rte_net_intel_cksum_flags_prepare(struct rte_mbuf *m, uint64_t
      * requested and headers to be used, but let's keep it simple.
      */
     if (unlikely(rte_pktmbuf_data_len(m) <
-                 inner_l3_offset + m->l3_len + m->l4_len))
+             inner_l3_offset + m->l3_len + m->l4_len))
         return -ENOTSUP;
-
+ 
     if (ol_flags & RTE_MBUF_F_TX_IPV4) {
         ipv4_hdr = rte_pktmbuf_mtod_offset(m, struct rte_ipv4_hdr *,
-                                           inner_l3_offset);
-
+                inner_l3_offset);
+ 
         if (ol_flags & RTE_MBUF_F_TX_IP_CKSUM)
             ipv4_hdr->hdr_checksum = 0;
     }
-
+ 
     if ((ol_flags & RTE_MBUF_F_TX_L4_MASK) == RTE_MBUF_F_TX_UDP_CKSUM ||
-        (ol_flags & RTE_MBUF_F_TX_UDP_SEG)) {
+            (ol_flags & RTE_MBUF_F_TX_UDP_SEG)) {
         if (ol_flags & RTE_MBUF_F_TX_IPV4) {
             udp_hdr = (struct rte_udp_hdr *)((char *)ipv4_hdr +
-                                             m->l3_len);
+                    m->l3_len);
             udp_hdr->dgram_cksum = rte_ipv4_phdr_cksum(ipv4_hdr,
-                                                       ol_flags);
+                    ol_flags);
         } else {
             ipv6_hdr = rte_pktmbuf_mtod_offset(m,
-                                               struct rte_ipv6_hdr *, inner_l3_offset);
+                struct rte_ipv6_hdr *, inner_l3_offset);
             /* non-TSO udp */
             udp_hdr = rte_pktmbuf_mtod_offset(m,
-                                              struct rte_udp_hdr *,
-                                              inner_l3_offset + m->l3_len);
+                    struct rte_udp_hdr *,
+                    inner_l3_offset + m->l3_len);
             udp_hdr->dgram_cksum = rte_ipv6_phdr_cksum(ipv6_hdr,
-                                                       ol_flags);
+                    ol_flags);
         }
     } else if ((ol_flags & RTE_MBUF_F_TX_L4_MASK) == RTE_MBUF_F_TX_TCP_CKSUM ||
-               (ol_flags & RTE_MBUF_F_TX_TCP_SEG)) {
+            (ol_flags & RTE_MBUF_F_TX_TCP_SEG)) {
         if (ol_flags & RTE_MBUF_F_TX_IPV4) {
             /* non-TSO tcp or TSO */
             tcp_hdr = (struct rte_tcp_hdr *)((char *)ipv4_hdr +
-                                             m->l3_len);
+                    m->l3_len);
             tcp_hdr->cksum = rte_ipv4_phdr_cksum(ipv4_hdr,
-                                                 ol_flags);
+                    ol_flags);
         } else {
             ipv6_hdr = rte_pktmbuf_mtod_offset(m,
-                                               struct rte_ipv6_hdr *, inner_l3_offset);
+                struct rte_ipv6_hdr *, inner_l3_offset);
             /* non-TSO tcp or TSO */
             tcp_hdr = rte_pktmbuf_mtod_offset(m,
-                                              struct rte_tcp_hdr *,
-                                              inner_l3_offset + m->l3_len);
+                    struct rte_tcp_hdr *,
+                    inner_l3_offset + m->l3_len);
             tcp_hdr->cksum = rte_ipv6_phdr_cksum(ipv6_hdr,
-                                                 ol_flags);
+                    ol_flags);
         }
     }
-
+ 
     return 0;
 }
-
-// Prepare the pseudo-header checksum using the mbuf's own ol_flags.
-static inline int rte_net_intel_cksum_prepare(struct rte_mbuf *m)
+ 
+static inline int
+rte_net_intel_cksum_prepare(rte_mbuf *m)
 {
     return rte_net_intel_cksum_flags_prepare(m, m->ol_flags);
 }

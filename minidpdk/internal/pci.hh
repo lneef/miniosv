@@ -21,81 +21,67 @@ struct rte_pci_driver;
 struct rte_eth_dev;
 
 namespace minidpdk {
-
 inline constexpr size_t kMaxPCIBarCount = 8;
 
 using irq_handler = void (*)(void *);
-
 struct intr_config {
     irq_handler handler = nullptr;
     void *arg = nullptr;
 };
 
 struct intr_handle {
-    const unsigned num_entries = 0;
+    const unsigned num_entries = 0;        
     pci::function *dev = nullptr;
-
-    struct vec_table {
-        pci::function *dev = nullptr;
-        std::vector<msix_vector*> vectors;
-
-        vec_table() = default;
-        explicit vec_table(pci::function *dev) : dev(dev) {}
-
-        size_t size() const { return vectors.size(); }
-        void resize(unsigned n) { vectors.resize(n, nullptr); }
-
-        msix_vector *get(unsigned idx) {
-            if (vectors[idx] == nullptr)
-                vectors[idx] = new msix_vector(dev);
-            return vectors[idx];
-        }
-
-        void assign(unsigned idx, void (*fn)(void *), void *arg) {
-            get(idx)->set_handler([fn, arg] { fn(arg); });
-        }
-
-        void unmask() {
-            for (auto *v : vectors)
-                if (v != nullptr)
-                    v->msix_unmask_entries();
-        }
-
-        void free() {
-            for (auto *v : vectors)
-                delete v;
-            vectors.clear();
-        }
-
-        void set_affinity(unsigned idx, uint16_t cpu){
-            get(idx)->set_affinity(sched::cpus[cpu % rte_lcore_count()]);
-        }
-    };
-
-    vec_table control;   
-    vec_table datapath;  
+    std::vector<msix_vector*> vectors;     
 
     intr_handle() = default;
-    intr_handle(pci::function *dev)
-        : num_entries(dev->msix_get_num_entries()), dev(dev),
-          control(dev), datapath(dev) {}
+    explicit intr_handle(pci::function *dev)
+        : num_entries(dev->msix_get_num_entries()), dev(dev) {}
 
-    int ctrl_alloc(unsigned n) {
-        if (vec_count() + n > num_entries)
+    int alloc(unsigned driver_max) {
+        if (driver_max > num_entries)
             return -ENOSPC;
-        control.resize(n);
+        vectors.assign(driver_max, nullptr);
         return 0;
     }
 
-    int dp_alloc(unsigned n) {
-        if (vec_count() + n > num_entries)
+    size_t size() const { return vectors.size(); }
+    msix_vector *get(unsigned idx) { return vectors[idx]; }
+    void enable() { dev->msix_enable(); }
+
+    int assign(unsigned idx, void (*isr)(void *), void *arg) {
+        if (idx >= vectors.size())
             return -ENOSPC;
-        datapath.resize(n);
+        if (vectors[idx] != nullptr)
+            return -EEXIST;
+        interrupt_manager im(dev);
+
+        // device limitations checked above
+        auto vs = im.request_vectors(1);
+        if (vs.empty())
+            return -ENOSPC;
+        msix_vector *v = vs[0];
+        im.assign_isr(v, [isr, arg] { isr(arg); });
+        if (!im.setup_entry(idx, v)) {
+            delete v;
+            return -EIO;
+        }
+        vectors[idx] = v;
         return 0;
     }
 
-    size_t vec_count() const{
-        return datapath.size() + control.size();
+    void set_affinity(unsigned idx, uint16_t req_cpu) {
+        vectors[idx]->set_affinity(sched::cpus[req_cpu % rte_lcore_count()]);
+    }
+
+    void unmask(unsigned idx) { vectors[idx]->msix_unmask_entries(); }
+
+    void free(unsigned idx) {
+        if (idx < vectors.size() && vectors[idx]) {
+            vectors[idx]->msix_mask_entries();
+            delete vectors[idx];
+            vectors[idx] = nullptr;
+        }
     }
 };
 
