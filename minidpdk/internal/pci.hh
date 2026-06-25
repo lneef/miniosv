@@ -91,10 +91,12 @@ public:
     explicit pci_device(pci::device &dev)
         : intr_handle{ &dev },
           dev(&dev) {
-        assert(dev.is_msix()); 
     }
 
-    void msix_enable() { dev->msix_enable(); }
+    void msix_enable() { 
+        assert(dev->is_msix());
+        dev->msix_enable(); 
+    }
     void msix_disable() { dev->msix_disable(); }
 
     // Map the device's MMIO BARs and record each region in mem_resource. OSv
