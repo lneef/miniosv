@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2017 Intel Corporation
+ */
 
 // MiniDPDK shim for DPDK's <ethdev_driver.h>, the driver-facing ethdev API: the
 // control-path operations table (struct eth_dev_ops), the per-device data block

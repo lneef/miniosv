@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2014 Intel Corporation
+ */
 
 // MiniDPDK shim for DPDK's <rte_byteorder.h>. Provides the endian macros, the
 // rte_be*/rte_le* width typedefs and the host<->big-endian converters the

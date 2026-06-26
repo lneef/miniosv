@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2014 Intel Corporation
+ */
 
 // MiniDPDK shim for DPDK's <rte_ether.h>. Provides the Ethernet address type,
 // the related length constants and the address-manipulation helpers. Only the

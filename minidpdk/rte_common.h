@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2019 Intel Corporation
+ */
 
 // MiniDPDK shim for DPDK's <rte_common.h>. The arithmetic, pointer and
 // power-of-2 helpers the ENA driver relies on, as idiomatic C++20 constexpr

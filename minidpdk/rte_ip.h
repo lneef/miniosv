@@ -1,4 +1,11 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 1982, 1986, 1990, 1993
+ *      The Regents of the University of California.
+ * Copyright(c) 2010-2014 Intel Corporation.
+ * Copyright(c) 2014 6WIND S.A.
+ * All rights reserved.
+ */
 
 // MiniDPDK shim for DPDK's <rte_ip.h>. Provides the IPv4/IPv6 header layouts and
 // the pseudo-header / raw checksum helpers needed by <rte_net.h> (and the IPv4

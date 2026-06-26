@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2017 Intel Corporation
+ */
 
 // MiniDPDK shim for DPDK's <rte_ethdev.h>. Provides the RSS flag, hash-function
 // and RETA definitions the ENA driver references.

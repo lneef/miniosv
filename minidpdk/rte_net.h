@@ -1,4 +1,7 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright 2016 6WIND S.A.
+ */
 
 // MiniDPDK shim for DPDK's <rte_net.h>. Only the inline TX checksum/TSO prepare
 // path is ported -- the one the ENA driver uses

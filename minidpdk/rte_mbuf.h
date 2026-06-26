@@ -1,4 +1,8 @@
 #pragma once
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright(c) 2010-2014 Intel Corporation
+ * Copyright 2014 6WIND S.A.
+ */
 
 // MiniDPDK shim for DPDK's <rte_mbuf.h>. The mbuf type and its pool are
 // minidpdk::mbuf / minidpdk::mem_pool (internal/mem_pool.hh). Provides the
