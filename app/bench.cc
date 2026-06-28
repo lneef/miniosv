@@ -53,6 +53,21 @@ static void handler(int sig) {
   terminate = 1;
 }
 
+static uint32_t parse_ipv4(const char *s) {
+  unsigned a, b, c, d;
+  if (sscanf(s, "%u.%u.%u.%u", &a, &b, &c, &d) != 4)
+    return 0;
+  return htobe32((a << 24) | (b << 16) | (c << 8) | d);
+}
+
+static void parse_mac(const char *s, rte_ether_addr &mac) {
+  unsigned v[RTE_ETHER_ADDR_LEN];
+  if (sscanf(s, "%x:%x:%x:%x:%x:%x", &v[0], &v[1], &v[2], &v[3], &v[4],
+             &v[5]) == RTE_ETHER_ADDR_LEN)
+    for (int i = 0; i < RTE_ETHER_ADDR_LEN; ++i)
+      mac.addr_bytes[i] = static_cast<uint8_t>(v[i]);
+}
+
 // ---------------------------------------------------------------------------
 // Packet build / verify (formerly net.hh).
 // ---------------------------------------------------------------------------
@@ -424,9 +439,9 @@ extern "C" void osv_app_main() {
   auto &conf = config.app;
   // Compile-time defaults (the static-linked app has no argv). Addresses are
   // stored network byte order, like inet_addr would yield: 10.0.0.1 / 10.0.0.2.
-  conf.sip = htobe32(0x0A000001);
-  conf.dip = htobe32(0x0A000002);
-  conf.dst = rte_ether_addr{{0x02, 0x00, 0x00, 0x00, 0x00, 0x02}};
+  conf.sip = parse_ipv4("0.0.0.0");
+  conf.dip = parse_ipv4("0.0.0.0");
+  parse_mac("00:00:00:00:00:00", conf.dst);
   conf.l4port = 1234;
   conf.mtu = 128;
 
