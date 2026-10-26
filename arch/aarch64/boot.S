@@ -97,6 +97,21 @@ init_cpu:
         msr     mdscr_el1, xzr // monitor debug: all disabled
         isb
 
+        /* A kernel we were kexec'ed from (Linux) may have enabled the extended
+           translation controls - FEAT_TCR2 with permission indirection (PIE)
+           and overlays - which change how the MMU reads our page-table
+           descriptors (translation faults with the tables intact). Firmware
+           hands over with them clear; reset them where the registers exist
+           (ID_AA64MMFR3_EL1.TCRX / .SCTLRX; accessing them otherwise traps). */
+        mrs     x0, S3_0_C0_C7_3        // ID_AA64MMFR3_EL1
+        tst     x0, #0xf                // TCRX
+        b.eq    1f
+        msr     S3_0_C2_C0_3, xzr       // TCR2_EL1
+1:      tst     x0, #0xf0               // SCTLRX
+        b.eq    2f
+        msr     S3_0_C1_C0_3, xzr       // SCTLR2_EL1
+2:      isb
+
         /* MAIR_EL1 contains 8 entries (one per byte) defining attributes
            which we will then reference from the page tables.
            We will currently use only Attr[4] for everything, but
@@ -306,8 +321,14 @@ ident_pt_l3_ttbr0:
         index = index + 1
         .endr
         .quad kernel_pt_l2_63_ttbr0 + 0x3 // Map 63GB-64GB -> 1GB-2GB
+        // Map 64GB-512GB one-to-one as well (1GB blocks). Physical 63-64GB is
+        // the only RAM not reachable before the linear map exists; a kexec
+        // hand-off places the device tree at the top of RAM, which on a large
+        // guest is up here.
+        index = 64
         .rept 448
-        .quad 0
+        .quad (index << 30) + 0x411
+        index = index + 1
         .endr
 // ident_pt_l2_0_ttbr0 .. ident_pt_l2_3_ttbr0 are four contiguous 512-entry L2
 // tables covering physical 0-4 GiB in 2 MiB blocks (entry i maps i*2MiB). Made

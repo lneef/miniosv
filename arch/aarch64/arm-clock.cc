@@ -163,6 +163,9 @@ void arm_clock_events::setup_on_cpu()
     u32 ctl = this->read_ctl();
     ctl &= ~0x7;
     this->write_ctl(ctl);
+    // A kernel we were kexec'ed from may have left the EL1 physical timer
+    // armed; we only use the virtual one.
+    asm volatile ("msr cntp_ctl_el0, xzr; isb" ::: "memory");
 }
 
 unsigned int arm_clock_events::read_ctl()

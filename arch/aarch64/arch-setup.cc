@@ -10,6 +10,7 @@
 #include <osv/drivers_config.h>
 #include <osv/kernel_config.h>
 #include "arch-setup.hh"
+#include "kexec-boot.hh"
 #include <osv/sched.hh>
 #include <osv/mempool.hh>
 #include <osv/elf.hh>
@@ -471,6 +472,10 @@ void arch_init_drivers()
 
 void arch_init_early_console()
 {
+    // Started by Linux kexec instead of the UEFI stub: fill in boot_info from
+    // the device tree first, since the UART below comes from it.
+    kexec_boot_prepare();
+
     // Like the x86 early console (a fixed COM port), the aarch64 early console
     // uses a compiled-in default UART. UEFI hands off no device tree, and ACPI
     // is not parsed this early, so we rely on the PL011 driver's default base
@@ -504,6 +509,10 @@ void arch_init_early_console()
         }
         console::arch_early_console = console::aarch64_console.pl011;
         console::PL011_Console::active = true;
+    }
+
+    if (auto err = kexec_boot_error()) {
+        abort("kexec boot: %s\n", err);
     }
 }
 

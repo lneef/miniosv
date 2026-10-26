@@ -122,7 +122,6 @@ tracepoint_base * const trace_buf::invalid_trace_point = reinterpret_cast<tracep
 
 PERCPU(trace_buf, percpu_trace_buffer);
 bool trace_enabled;
-static bool global_backtrace_enabled;
 
 typeof(tracepoint_base::tp_list) tracepoint_base::tp_list __attribute__((init_priority((int)init_prio::tracepoint_base)));
 
@@ -160,7 +159,6 @@ void ensure_log_initialized()
 }
 
 void enable_backtraces(bool backtrace) {
-    global_backtrace_enabled = backtrace;
     for (auto& tp : tracepoint_base::tp_list) {
         tp.backtrace(backtrace);
     }

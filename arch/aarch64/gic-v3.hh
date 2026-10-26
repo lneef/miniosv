@@ -91,6 +91,7 @@
 
 #define GICR_CTLR                  (0x0000)
 #define GICR_CTLR_EnableLPIs       (1U)
+#define GICR_CTLR_RWP              (1U << 3)
 #define GICR_IIDR                  (0x0004)
 #define GICR_TYPER                 (0x0008)
 #define GICR_STATUSR               (0x0010)
@@ -181,6 +182,7 @@ public:
     gic_v3_redist(const mmu::phys *bases, const size_t *lens, int count);
 
     void init_cpu_base(int smp_idx);
+    bool disable_lpis(int smp_idx);
     void init_lpis(int smp_idx, u64 prop_base, u64 pend_base);
 
     u32 read_at_offset(int smp_idx, u32 offset);
@@ -223,6 +225,8 @@ private:
 #define GITS_CBASER_VALID           0x8000000000000000ull
 
 #define GITS_CTLR_ENABLED           0x1
+#define GITS_CTLR_ImDe              (1U << 1)
+#define GITS_CTLR_QUIESCENT         (1U << 31)
 #define GITS_TYPER_PTA              0x80000 //Bit 19 - see https://developer.arm.com/documentation/ddi0601/2024-09/External-Registers/GITS-TYPER--ITS-Type-Register
 
 enum class gic_its_reg : unsigned int {
@@ -259,6 +263,7 @@ class gic_v3_its {
 public:
     gic_v3_its(mmu::phys b, size_t l);
 
+    u32 read_reg(gic_its_reg r);
     u64 read_reg64(gic_its_reg r);
     u64 read_reg64_at_offset(gic_its_reg r, u32 offset);
     void write_reg(gic_its_reg r, u32 v);
@@ -266,6 +271,7 @@ public:
     void write_reg64_at_offset(gic_its_reg r, u32 offset, u64 v);
 
     void read_type_register();
+    void force_quiescent();
     void initialize_cmd_queue();
     void enqueue_cmd(its_cmd *cmd);
 

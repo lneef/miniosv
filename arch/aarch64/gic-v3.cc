@@ -134,6 +134,25 @@ void gic_v3_redist::init_cpu_base(int smp_idx)
           mpidr);
 }
 
+// The redistributor keeps delivering LPIs from whatever tables a previous
+// kernel (Linux, before a kexec) gave it; the tables may only be replaced
+// with EnableLPIs clear. Whether the bit can be cleared once set is
+// IMPLEMENTATION DEFINED (QEMU allows it; Linux's redist_disable_lpis() has
+// the same problem). Returns whether LPIs are now disabled.
+bool gic_v3_redist::disable_lpis(int smp_idx)
+{
+    u32 val = read_at_offset(smp_idx, GICR_CTLR);
+    if (!(val & GICR_CTLR_EnableLPIs)) {
+        return true;
+    }
+    write_at_offset(smp_idx, GICR_CTLR, val & ~GICR_CTLR_EnableLPIs);
+    asm volatile ("dsb sy" ::: "memory");
+    do {
+        val = read_at_offset(smp_idx, GICR_CTLR);
+    } while (val & GICR_CTLR_RWP);
+    return !(val & GICR_CTLR_EnableLPIs);
+}
+
 void gic_v3_redist::init_lpis(int smp_idx, u64 prop_base, u64 pend_base)
 {
     //Set common LPI configuration table
@@ -208,6 +227,11 @@ gic_v3_its::gic_v3_its(mmu::phys b, size_t l) : _base(b)
     }
 }
 
+u32 gic_v3_its::read_reg(gic_its_reg reg)
+{
+    return mmio_getl(mmio_a((mmioaddr_t)_base, (u32)reg));
+}
+
 u64 gic_v3_its::read_reg64(gic_its_reg reg)
 {
     return mmio_getq(mmio_a((mmioaddr_t)_base, (u32)reg));
@@ -236,6 +260,25 @@ void gic_v3_its::write_reg64_at_offset(gic_its_reg reg, u32 offset, u64 value)
 void gic_v3_its::read_type_register()
 {
     _typer = read_reg64(gic_its_reg::GICITS_TYPER);
+}
+
+// Disable the ITS and wait until it is quiescent. The table and command
+// queue registers may only be written in that state, and a kernel we were
+// kexec'ed from leaves the ITS enabled (Linux's its_force_quiescent()).
+void gic_v3_its::force_quiescent()
+{
+    u32 ctlr = read_reg(gic_its_reg::GICITS_CTLR);
+    if ((ctlr & GITS_CTLR_QUIESCENT) && !(ctlr & GITS_CTLR_ENABLED)) {
+        return;
+    }
+    write_reg(gic_its_reg::GICITS_CTLR, ctlr & ~(GITS_CTLR_ENABLED | GITS_CTLR_ImDe));
+    for (int i = 0; i < 1000000; i++) {
+        if (read_reg(gic_its_reg::GICITS_CTLR) & GITS_CTLR_QUIESCENT) {
+            return;
+        }
+        asm volatile ("isb" ::: "memory");
+    }
+    abort("gic_v3_its: the ITS did not become quiescent\n");
 }
 
 //The 4K queue is enough for 128 commands before it wraps around
@@ -375,6 +418,17 @@ void gic_v3_driver::init_lpis(int smp_idx)
         return;
     }
 
+    // Quiesce what a previous kernel left behind before touching any LPI
+    // state: the ITS first (once), then this CPU's redistributor.
+    if (smp_idx == 0) {
+        _gits.force_quiescent();
+    }
+    if (!_gicrd.disable_lpis(smp_idx)) {
+        abort("gic: cpu %d: GICR_CTLR.EnableLPIs cannot be cleared; the LPI "
+              "tables of the kernel we were kexec'ed from would have to be "
+              "adopted, which is not implemented\n", smp_idx);
+    }
+
     //Identify number of LPIs supported by GIC and setup global configuration table
     if (smp_idx == 0) {
         //See https://developer.arm.com/documentation/ddi0601/2022-06/External-Registers/GICD-TYPER--Interrupt-Controller-Type-Register?lang=en
@@ -448,10 +502,13 @@ void gic_v3_driver::init_dist()
         _gicd.write_reg_at_offset((u32)gicd_reg_irq8::GICD_IPRIORITYR, i, GICD_IPRIORITY_DEF);
     }
 
-    // Deactivate and disable all SPIs
+    // Deactivate, disable and clear the pending state of all SPIs (the
+    // latter matters after a kexec: the previous kernel's devices may have
+    // left interrupts pending)
     for (unsigned int i = GIC_SPI_BASE; i < _nr_irqs; i += GICD_I_PER_ICACTIVERn) {
         _gicd.write_reg_at_offset((u32)gicd_reg_irq1::GICD_ICACTIVER, i / 8, GICD_DEF_ICACTIVERn);
         _gicd.write_reg_at_offset((u32)gicd_reg_irq1::GICD_ICENABLER, i / 8, GICD_DEF_ICENABLERn);
+        _gicd.write_reg_at_offset((u32)gicd_reg_irq1::GICD_ICPENDR, i / 8, GICD_DEF_ICENABLERn);
     }
 
     _gicd.wait_for_write_complete();
@@ -507,6 +564,9 @@ void gic_v3_driver::init_redist(int smp_idx)
 
     /* Disable all PPIs */
     _gicrd.write_at_offset(smp_idx, GICR_ICENABLER0, GICD_DEF_PPI_ICENABLERn);
+
+    /* Clear pending SGIs and PPIs (stale after a kexec) */
+    _gicrd.write_at_offset(smp_idx, GICR_ICPENDR0, 0xffffffff);
 
     /* Configure SGIs and PPIs as non-secure Group 1 */
     _gicrd.write_at_offset(smp_idx, GICR_IGROUPR0, GICD_DEF_IGROUPRn);

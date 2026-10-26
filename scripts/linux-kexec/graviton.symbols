@@ -1,0 +1,142 @@
+# Kconfig symbols whose values are copied verbatim from the AWS Graviton
+# reference config (Amazon Linux 2023 kernel6.18, aarch64 - see build.sh).
+#
+# One symbol per line, without the CONFIG_ prefix. A trailing '*' copies every
+# symbol in the reference config with that prefix. Each listed symbol must
+# exist in the reference config, and build.sh fails if a copied value does not
+# survive into the final .config, so this list cannot drift silently. A value
+# of 'm' is copied as 'y': the image has no root filesystem to load modules
+# from. Everything not listed starts from allnoconfig; deliberate departures
+# from Graviton live in miniosv.config.
+#
+# The scope is what miniosv itself runs on: UEFI + ACPI, PSCI, GICv2/v3 + ITS,
+# the generic timer, the PMU, PCI (ECAM, bridges, MSI/MSI-X), and a PL011 or
+# 16550 console. No storage or network drivers (no NVMe, ENA, virtio).
+
+# --- CPU, memory model, scheduler -------------------------------------------
+SMP
+NR_CPUS
+HOTPLUG_CPU
+SCHED_MC
+PREEMPT_NONE
+HZ_100
+ARM64_4K_PAGES
+ARM64_VA_BITS_48
+ARM64_PA_BITS_48
+SPARSEMEM_VMEMMAP
+ARM64_SW_TTBR0_PAN
+ARM64_TAGGED_ADDR_ABI
+ARM64_HW_AFDBM
+ARM64_PAN
+ARM64_LSE_ATOMICS
+ARM64_USE_LSE_ATOMICS
+ARM64_RAS_EXTN
+ARM64_CNP
+ARM64_PTR_AUTH
+ARM64_PTR_AUTH_KERNEL
+ARM64_AMU_EXTN
+ARM64_TLB_RANGE
+ARM64_BTI
+ARM64_E0PD
+ARM64_MTE
+ARM64_EPAN
+ARM64_POE
+ARM64_HAFT
+ARM64_GCS
+ARM64_SVE
+ARM64_SME
+ARM64_PSEUDO_NMI
+ARM64_ACPI_PARKING_PROTOCOL
+
+# --- CPU errata (Neoverse N1/V1/V2 and friends) -----------------------------
+ARM64_ERRATUM_*
+ARM64_WORKAROUND_*
+
+# --- Mitigations and hardening -----------------------------------------------
+UNMAP_KERNEL_AT_EL0
+MITIGATE_SPECTRE_BRANCH_HISTORY
+STACKPROTECTOR
+STACKPROTECTOR_STRONG
+RANDOMIZE_KSTACK_OFFSET
+
+# --- Firmware: UEFI, ACPI, PSCI ---------------------------------------------
+EFI
+EFI_STUB
+EFI_ARMSTUB_DTB_LOADER
+ACPI
+ACPI_SPCR_TABLE
+ACPI_MCFG
+ACPI_IORT
+ACPI_GTDT
+ARM_PSCI_FW
+ARM_SMCCC_SOC_ID
+PNP
+PNPACPI
+
+# --- Interrupt controller, timer, PMU ---------------------------------------
+ARM_GIC
+ARM_GIC_V2M
+ARM_GIC_V3
+ARM_GIC_V3_ITS
+ARM_ARCH_TIMER
+ARM_ARCH_TIMER_EVTSTREAM
+ARM_ARCH_TIMER_OOL_WORKAROUND
+PERF_EVENTS
+ARM_PMU
+ARM_PMUV3
+
+# --- PCI: ECAM host, MSI ------------------------------------------------------
+PCI
+PCI_MSI
+PCI_ECAM
+PCI_DOMAINS_GENERIC
+
+# --- Serial console: PL011 (QEMU virt) and 16550 (EC2, found via SPCR). The
+# Graviton's 16550 is a PCI device (1d0f:8250), so ttyS0 needs the PCI 8250
+# driver; earlycon alone only covers the kernel's own messages.
+SERIAL_EARLYCON
+SERIAL_8250
+SERIAL_8250_CONSOLE
+SERIAL_8250_PNP
+SERIAL_8250_PCI
+SERIAL_8250_PCILIB
+SERIAL_8250_NR_UARTS
+SERIAL_8250_RUNTIME_UARTS
+SERIAL_AMBA_PL011
+SERIAL_AMBA_PL011_CONSOLE
+
+# --- kexec, kdump, signed kexec ----------------------------------------------
+KEXEC
+KEXEC_FILE
+KEXEC_SIG
+KEXEC_IMAGE_VERIFY_SIG
+CRASH_DUMP
+PROC_VMCORE
+MODULES
+MODULE_SIG
+MODULE_SIG_SHA512
+SIGNED_PE_FILE_VERIFICATION
+PKCS7_MESSAGE_PARSER
+SECURITY
+SECURITY_LOCKDOWN_LSM
+LOCK_DOWN_KERNEL_FORCE_NONE
+MAGIC_SYSRQ
+PANIC_ON_OOPS
+PANIC_TIMEOUT
+
+# --- Userspace in an initramfs -----------------------------------------------
+BLK_DEV_INITRD
+RD_GZIP
+RD_ZSTD
+BINFMT_ELF
+BINFMT_SCRIPT
+DEVTMPFS
+TMPFS
+
+# --- Diagnostics --------------------------------------------------------------
+PRINTK_TIME
+DEBUG_KERNEL
+KALLSYMS
+KALLSYMS_ALL
+DEBUG_FS
+PROC_KCORE

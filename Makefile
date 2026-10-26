@@ -488,6 +488,34 @@ efi_target := aarch64-unknown-windows
 efi_boot_name := BOOTAA64.EFI
 efi_arch_cxxflags :=
 
+# ---- kexec image -----------------------------------------------------------
+# Wrap the kernel ELF into an arm64 Linux "Image" (boot/kexec/) that a running
+# Linux can kexec into (scripts/linux-kexec/ is the harness for that). The ELF
+# sits at kexec_elf_offset in the image and is used in place; image_size has to
+# cover its .bss, so it is computed from .edata at build time.
+NM=$(shell which llvm-nm 2>/dev/null || which llvm-nm-20 2>/dev/null || echo nm)
+kexec_elf_offset := 0x10000
+kexec_elf_vaddr := $(shell printf "0x%X" $$(( $(kernel_vm_base) + 0x10000 )))
+
+$(out)/boot/kexec/image.o: boot/kexec/image.S $(out)/loader-stripped.elf $(out)/loader.elf
+	$(makedir)
+	@edata=$$($(NM) $(out)/loader.elf | awk '$$3 == ".edata" { print "0x" $$1 }'); \
+	[ -n "$$edata" ] || { echo "image.S: no .edata symbol in loader.elf" >&2; exit 1; }; \
+	size=$$(( edata - $(kexec_elf_vaddr) + $(kexec_elf_offset) )); \
+	echo "  AS-KEXEC image.S (image_size=$$(printf 0x%x $$size))"; \
+	clang --target=aarch64-linux-gnu -c -DKERNEL_ELF_FILE='"$(out)/loader-stripped.elf"' \
+		-DKERNEL_ELF_VADDR=$(kexec_elf_vaddr) -DKERNEL_IMAGE_SIZE=$$size -o $@ $<
+
+$(out)/boot/kexec/image.elf: $(out)/boot/kexec/image.o boot/kexec/image.ld
+	$(call quiet, clang --target=aarch64-linux-gnu -fuse-ld=lld -nostdlib -static \
+		-Xlinker -T -Xlinker boot/kexec/image.ld -Xlinker --build-id=none \
+		-o $@ $<, LINK image.elf)
+
+$(out)/loader.kexec: $(out)/boot/kexec/image.elf
+	$(call quiet, $(OBJCOPY) -O binary $< $@, OBJCOPY $@)
+
+all: $(out)/loader.kexec
+
 endif # aarch64
 
 
@@ -607,6 +635,7 @@ objects += arch/$(arch)/arm-clock.o
 objects += arch/$(arch)/gic-common.o
 objects += arch/$(arch)/gic-v2.o
 objects += arch/$(arch)/gic-v3.o
+objects += arch/$(arch)/kexec-boot.o
 # cpuid.cc uses array designators ([HWCAP_BIT_FP] = ...) - a C99 extension in
 # C++ that Clang flags under -Werror; the initializer order is deliberate.
 $(out)/arch/aarch64/cpuid.o: CXXFLAGS += -Wno-c99-designator

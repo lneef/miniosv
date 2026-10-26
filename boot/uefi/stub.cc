@@ -28,6 +28,7 @@
 
 #include "efi.hh"
 #include <osv/boot-info.hh>
+#include <osv/boot-acpi.hh>
 
 // The kernel links its segments to a fixed virtual window but is loaded at a
 // firmware-chosen physical base (see load_kernel). The stub places each segment
@@ -101,59 +102,6 @@ void print(const char *s)
         buf[0] = static_cast<CHAR16>(*s);
         ST->ConOut->OutputString(ST->ConOut, buf);
     }
-}
-
-// SPCR fields the kernel needs to pick and configure the right console driver.
-// Interface Type (offset 36) tells PL011/SBSA (3/0x0e) apart from 16550 (0/1);
-// the GAS Access Size (offset 43) gives the register access width (1=byte,
-// 2=word, 3=dword) - AWS Graviton's 16550 is dword (mmio32).
-unsigned char spcr_iface_type = 0xff;
-unsigned char spcr_access_size = 0;     // GAS AccessSize: 0=undef,1=8b,2=16b,3=32b,4=64b
-
-// Unaligned little-endian reads (ACPI table fields are not naturally aligned).
-uint32_t rd32(const void *p)
-{
-    uint32_t v;
-    memcpy(&v, p, 4);
-    return v;
-}
-uint64_t rd64(const void *p)
-{
-    uint64_t v;
-    memcpy(&v, p, 8);
-    return v;
-}
-
-// Locate the ACPI SPCR (Serial Port Console Redirection) table and return the
-// console UART's physical base address (0 if none). The kernel's early console
-// targets this instead of a compiled-in default, so serial output works on
-// platforms whose UART is not at the QEMU virt address (e.g. AWS Graviton).
-uint64_t find_spcr_uart(uint64_t rsdp)
-{
-    if (!rsdp)
-        return 0;
-    auto r = reinterpret_cast<const unsigned char *>(rsdp);
-    // RSDP: XsdtAddress at offset 24 (ACPI 2.0+), RsdtAddress at offset 16.
-    uint64_t xsdt = rd64(r + 24);
-    uint64_t rsdt = rd32(r + 16);
-    uint64_t hdr = xsdt ? xsdt : rsdt;
-    int entsize = xsdt ? 8 : 4;
-    if (!hdr)
-        return 0;
-    auto h = reinterpret_cast<const unsigned char *>(hdr);
-    uint32_t len = rd32(h + 4);
-    uint32_t n = (len > 36) ? (len - 36) / entsize : 0;
-    for (uint32_t i = 0; i < n; i++) {
-        uint64_t tbl = (entsize == 8) ? rd64(h + 36 + i * 8)
-                                      : (uint64_t)rd32(h + 36 + i * 4);
-        auto t = reinterpret_cast<const unsigned char *>(tbl);
-        if (t[0] == 'S' && t[1] == 'P' && t[2] == 'C' && t[3] == 'R') {
-            spcr_iface_type = t[36];  // Interface Type (0/1 = 16550, 3/0x0e = PL011/SBSA)
-            spcr_access_size = t[43]; // GAS AccessSize (3 = dword/mmio32 on Graviton)
-            return rd64(t + 44);      // Base Address (GAS Address field)
-        }
-    }
-    return 0;
 }
 
 [[noreturn]] void die(const char *msg)
@@ -380,7 +328,7 @@ extern "C" EFIAPI EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *st)
     print("miniosv UEFI stub starting\n");
 
     uint64_t rsdp = find_rsdp();
-    uint64_t uart_base = find_spcr_uart(rsdp);
+    auto uart = osv::boot_acpi::find_spcr_uart(rsdp);
 
     // Allocate the hand-off structures as EfiLoaderData so they survive
     // ExitBootServices. Size the memmap generously - the UEFI map is bounded
@@ -430,12 +378,9 @@ extern "C" EFIAPI EFI_STATUS efi_main(EFI_HANDLE image, EFI_SYSTEM_TABLE *st)
     bi->cmdline_len = cmdline_len;
     bi->kernel_phys_base = kernel_phys_base;
     bi->boot_unixtime_ns = read_boot_time();
-    bi->uart_base = uart_base;
-    bi->uart_type = spcr_iface_type;
-    // GAS AccessSize -> register access width in bytes (1/2/4); default to byte
-    // when the firmware leaves it undefined.
-    bi->uart_access_width = spcr_access_size == 3 ? 4 :
-                            spcr_access_size == 2 ? 2 : 1;
+    bi->uart_base = uart.base;
+    bi->uart_type = uart.iface_type;
+    bi->uart_access_width = osv::boot_acpi::spcr_access_width(uart.access_size);
 
     // Fetch the UEFI memory map, normalize it, and ExitBootServices. The map
     // key can go stale between GetMemoryMap and ExitBootServices, so retry.

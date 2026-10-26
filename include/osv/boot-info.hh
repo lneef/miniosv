@@ -46,8 +46,15 @@ struct boot_memmap_entry {
 // and a kernel built from different trees.
 static constexpr uint64_t boot_info_magic = 0x4f53565542494631ull; // "OSVUBIF1"
 
-// NB: arch/aarch64/boot.S reads kernel_phys_base by its byte offset (40); keep
-// the layout in sync if you reorder these fields.
+// Magic of a boot_info written by the aarch64 kexec trampoline (boot/kexec/)
+// instead of the UEFI stub: only magic, kernel_phys_base and dtb_addr are
+// filled in; the kernel derives everything else from the device tree Linux
+// handed over (arch/aarch64/kexec-boot.cc) before any other use.
+static constexpr uint64_t boot_info_magic_kexec = 0x4f53564b42494631ull; // "OSVKBIF1"
+
+// NB: arch/aarch64/boot.S reads kernel_phys_base by its byte offset (40) and
+// boot/kexec/image.S writes magic (0), kernel_phys_base (40) and dtb_addr (72);
+// keep the layout in sync if you reorder these fields.
 struct boot_info {
     uint64_t magic;                 // boot_info_magic               (offset 0)
     uint64_t acpi_rsdp;             // phys addr of ACPI RSDP, 0 if none (8)
@@ -60,6 +67,8 @@ struct boot_info {
     uint64_t uart_base;             // phys addr of the ACPI SPCR console UART, 0 if none (56)
     uint8_t  uart_type;             // SPCR Interface Type: 0/1 = 16550, 3/0x0e = PL011/SBSA (64)
     uint8_t  uart_access_width;     // SPCR GAS access width in bytes: 1, 2 or 4 (65)
+    uint8_t  pad[6];                //                                   (66)
+    uint64_t dtb_addr;              // kexec only: phys addr of the Linux-provided DTB (72)
 } __attribute__((packed));
 
 }

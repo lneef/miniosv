@@ -1,0 +1,170 @@
+#!/bin/sh
+#
+# PID 1 of the miniosv kexec harness: busybox in the kernel's built-in
+# initramfs. Without a kxtest= parameter it mounts the usual pseudo
+# filesystems and gives you a shell on the console. With one, it runs an
+# unattended chain of kexecs, one step per kernel, and prints
+# "KEXEC-TEST: PASS" (then powers off) or "KEXEC-TEST: FAIL ...".
+#
+#   kxtest=file,load,kho,kdump
+#
+#   file   kexec_file_load() into /boot/Image
+#   load   kexec_load() into /boot/Image (kexec-tools parses the Image)
+#   kho    Kexec HandOver: finalize, kexec_file_load(), then check that the
+#          next kernel got the handover FDT (needs kho=on)
+#   kdump  load /boot/Image as the crash kernel, panic, and check /proc/vmcore
+#          in the capture kernel (needs crashkernel=)
+#   miniosv-file, miniosv-load
+#          kexec into /boot/payload/loader.kexec (a miniosv built with
+#          scripts/linux-kexec/app, which prints the PASS line itself) with
+#          kexec_file_load() or kexec_load(); must be the last step
+#
+# Each kernel checks the step that started it (kxprev=) and starts the next.
+
+export PATH=/sbin:/bin
+
+/bin/busybox --install -s /bin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev
+mount -t debugfs debugfs /sys/kernel/debug
+mount -t tmpfs tmpfs /tmp
+
+cmdline=$(cat /proc/cmdline)
+
+param() {
+    for w in $cmdline; do
+        case "$w" in "$1="*) echo "${w#*=}"; return ;; esac
+    done
+}
+
+# The command line $1 without the parameters named in the other arguments.
+without() {
+    line=$1
+    shift
+    out=
+    for w in $line; do
+        keep=1
+        for p in "$@"; do
+            case "$w" in "$p="*|"$p") keep= ;; esac
+        done
+        [ -n "$keep" ] && out="$out $w"
+    done
+    echo "${out# }"
+}
+
+log() { echo "KEXEC-TEST: $*"; }
+
+fail() {
+    log "FAIL $*"
+    poweroff -f
+}
+
+# Everything under /boot (this kernel's Image plus any extra payloads) goes
+# with each kexec as the next kernel's initrd, so every kernel in the chain
+# can kexec again.
+make_payload() {
+    [ -f /tmp/payload.cpio ] && return
+    (cd / && find boot | cpio -o -H newc > /tmp/payload.cpio 2>/dev/null) ||
+        fail "packing /boot into /tmp/payload.cpio"
+}
+
+check_prev() {
+    case "$1" in
+    file|load)
+        ;;
+    kho)
+        [ -e /sys/kernel/debug/kho/in/fdt ] ||
+            fail "kho: no /sys/kernel/debug/kho/in/fdt after a KHO kexec"
+        log "kho: handover FDT present, sub FDTs: $(ls /sys/kernel/debug/kho/in/sub_fdts 2>/dev/null | tr '\n' ' ')"
+        ;;
+    kdump)
+        [ -e /proc/vmcore ] || fail "kdump: no /proc/vmcore in the capture kernel"
+        size=$(stat -c %s /proc/vmcore)
+        [ "$size" -gt 0 ] || fail "kdump: /proc/vmcore is empty"
+        log "kdump: /proc/vmcore is $size bytes"
+        ;;
+    *)
+        fail "unknown kxprev=$1"
+        ;;
+    esac
+    log "$1 OK"
+}
+
+run_step() {
+    step=$1 next=$2
+    make_payload
+    case "$step" in
+    file)
+        kexec -s -l /boot/Image --initrd=/tmp/payload.cpio --command-line="$next" ||
+            fail "file: kexec_file_load"
+        ;;
+    load)
+        kexec -c -l /boot/Image --initrd=/tmp/payload.cpio --command-line="$next" ||
+            fail "load: kexec_load"
+        ;;
+    kho)
+        [ -d /sys/kernel/debug/kho/out ] || fail "kho: KHO is off (boot with kho=on)"
+        echo 1 > /sys/kernel/debug/kho/out/finalize || fail "kho: finalize"
+        kexec -s -l /boot/Image --initrd=/tmp/payload.cpio --command-line="$next" ||
+            fail "kho: kexec_file_load"
+        ;;
+    kdump)
+        [ "$(cat /sys/kernel/kexec_crash_size)" -gt 0 ] ||
+            fail "kdump: no crash kernel memory (boot with crashkernel=)"
+        capture="$(without "$next" crashkernel kho) nr_cpus=1 reset_devices"
+        kexec -s -p /boot/Image --initrd=/tmp/payload.cpio --command-line="$capture" ||
+            fail "kdump: loading the crash kernel"
+        log "kdump: crash kernel loaded, panicking"
+        echo c > /proc/sysrq-trigger
+        fail "kdump: still alive after the panic"
+        ;;
+    miniosv-file|miniosv-load)
+        [ -f /boot/payload/loader.kexec ] ||
+            fail "$step: no /boot/payload/loader.kexec (build.sh --payload)"
+        case "$step" in miniosv-file) how=-s ;; *) how=-c ;; esac
+        kexec -d $how -l /boot/payload/loader.kexec --command-line="$next" ||
+            fail "$step: loading loader.kexec"
+        ;;
+    *)
+        fail "unknown kxtest step '$step'"
+        ;;
+    esac
+    log "$step: kexec into the next kernel"
+    kexec -e
+    fail "$step: kexec -e returned"
+}
+
+steps=$(param kxtest)
+prev=$(param kxprev)
+
+if [ -n "$steps$prev" ]; then
+    [ -n "$prev" ] && check_prev "$prev"
+    if [ -z "$steps" ]; then
+        log "PASS"
+        poweroff -f
+    fi
+    step=${steps%%,*}
+    rest=${steps#"$step"}
+    rest=${rest#,}
+    next="$(without "$cmdline" kxtest kxprev) kxprev=$step${rest:+ kxtest=$rest}"
+    run_step "$step" "$next"
+fi
+
+cat <<EOF
+
+miniosv kexec harness - Linux $(uname -r)
+  /boot/Image        this kernel (for kexec self-tests)
+  /boot/payload/     extra payloads given to build.sh --payload
+                     (loader.kexec: kexec -s -l /boot/payload/loader.kexec && kexec -e)
+
+  kexec_file_load:  kexec -s -l /boot/Image --reuse-cmdline && kexec -e
+  kexec_load:       kexec -c -l /boot/Image --reuse-cmdline && kexec -e
+  kdump:            boot with crashkernel=256M, kexec -s -p ..., echo c > /proc/sysrq-trigger
+  KHO:              boot with kho=on, echo 1 > /sys/kernel/debug/kho/out/finalize, kexec -s ...
+
+EOF
+
+while true; do
+    setsid cttyhack sh
+done
